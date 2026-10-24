@@ -79,6 +79,7 @@ WAL size.
 A 10,000-page checkpoint runs 1.4 to 2.0x faster than the 1,000-page default
 and holds a WAL about ten times larger (41 MB against 4 MB at this payload).
 Ten queues in separate files run 4 to 5x faster than the same ten in one
-file, which fits SQLite allowing one writer per database file. Two runs an hour apart on the same machine differed by up to 2x on the
-ckpt10000 rows, so read the ratios, not the absolute numbers, and compare runs
-on the same machine only.
+file, which fits SQLite allowing one writer per database file. Two runs an
+hour apart on the same machine differed by up to 2x on the ckpt10000 rows, so
+read the ratios, not the absolute numbers, and compare runs on the same machine
+only.

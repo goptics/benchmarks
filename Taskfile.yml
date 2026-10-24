@@ -31,18 +31,18 @@ tasks:
       - '{{.BAR}} --stack pool/bench/pool-8cpu.txt  -n "Pool (8 CPUs)"  --id pool-8cpu  -d "Same matrix at GOMAXPROCS 8" -o {{.DATA}}/pool-8cpu.json'
       - '{{.BAR}} --stack pool/bench/pool-4cpu.txt  -n "Pool (4 CPUs)"  --id pool-4cpu  -d "Same matrix at GOMAXPROCS 4" -o {{.DATA}}/pool-4cpu.json'
       - >-
-        {{.BAR}} redis/bench/redis.txt -n "Redis (Persistent)" --id redis-persistent
+        {{.BAR}} --stack redis/bench/redis.txt -n "Redis (Persistent)" --id redis-persistent
         -d "One consumer process: VarMQ persistent queue vs Asynq, rmq, taskq, gocraft/work; plus enqueue-only and pickup latency"
         -f '^(Benchmark)?(Durable/[^/]+C1|Enqueue/Enqueue|Latency/[^/]+)/[^/]+/{{.SUBJECTS}}$'
         --better p50-ms:low,p99-ms:low,max-ms:low
         -o {{.DATA}}/redis-persistent.json
       - >-
-        {{.BAR}} redis/bench/redis.txt -n "Redis (Distributed)" --id redis-distributed
+        {{.BAR}} --stack redis/bench/redis.txt -n "Redis (Distributed)" --id redis-distributed
         -d "Four consumer processes: VarMQ distributed queue vs Asynq, rmq, taskq, gocraft/work"
         -f '^(Benchmark)?Durable/[^/]+C4/'
         -o {{.DATA}}/redis-distributed.json
       - >-
-        {{.BAR}} sqlite/bench/sqlite.txt -n "Sqlite (Persistent)" --id sqlite-persistent
+        {{.BAR}} --stack sqlite/bench/sqlite.txt -n "Sqlite (Persistent)" --id sqlite-persistent
         -d "sqliteq through a VarMQ worker: one queue, drain, priority, ten queues; WAL checkpoint 1000 vs 10000 pages"
         --better walMB:low -o {{.DATA}}/sqlite-persistent.json
       - jq -se 'all(.data | length > 0)' {{.JSONS}}
