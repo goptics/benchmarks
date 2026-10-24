@@ -74,7 +74,7 @@ What each library does per job, read from source: [NOTES.md](NOTES.md).
 
 Names: `BenchmarkDurable/<Task>W<workers>C<instances>/<workload>/<subject>`, `BenchmarkEnqueue/Enqueue/<workload>/<subject>`, `BenchmarkLatency/LatencyW10C1/1u-1Kt/<subject>`.
 
-Each subject runs at its library defaults except worker concurrency and the Redis pool size, `max(workers, 10*GOMAXPROCS)`; the settings a library forces are listed in [NOTES.md](NOTES.md).
+Each subject runs at its library defaults except worker concurrency and the Redis pool size, `max(workers, 10*GOMAXPROCS)`; the settings a library forces are listed in [NOTES.md](NOTES.md). rmq has no default for its poll duration or prefetch limit; the harness uses 1 ms and `max(1000, 2*workers)` (the example's 100 ms capped a connection near prefetch / 0.1 s), see [NOTES.md](NOTES.md).
 
 VarMQ's persistent queue runs one instance, so it has no `C4` rows.
 
