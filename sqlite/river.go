@@ -72,9 +72,14 @@ func openRiver(tb testing.TB, dir string, sc scenario, ckpt int, ran *atomic.Int
 	}
 
 	client, err := river.NewClient(driver, &river.Config{
-		Logger:  slog.New(slog.DiscardHandler),
-		Queues:  queues,
-		Workers: workers,
+		// Forced: River fetches at most MaxWorkers jobs, then waits FetchCooldown
+		// before the next fetch, so the default 100 ms caps 16 workers at 160
+		// jobs/s whatever the database does. The 1 ms minimum lets SQLite and
+		// River's own per-job work set the number instead.
+		FetchCooldown: river.FetchCooldownMin,
+		Logger:        slog.New(slog.DiscardHandler),
+		Queues:        queues,
+		Workers:       workers,
 	})
 	if err != nil {
 		tb.Fatalf("river client: %v", err)
