@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"path/filepath"
 	"sync/atomic"
 	"testing"
@@ -135,12 +136,16 @@ func (c *backliteConsumer) leftover() (int, error) {
 }
 
 func (c *backliteConsumer) close() error {
+	var err error
+
 	if c.started {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 
-		c.client.Stop(ctx)
+		if !c.client.Stop(ctx) {
+			err = errors.New("backlite: workers still busy a minute after stop")
+		}
 	}
 
-	return c.db.Close()
+	return errors.Join(err, c.db.Close())
 }

@@ -95,6 +95,11 @@ func waitHandled(ran *atomic.Int64, total int, leftover func() (int, error), dea
 		}
 	}
 
+	// leftover is a table scan for some subjects, on a pool of one connection
+	// that the last acknowledgements need too, so it is polled more gently
+	slow := time.NewTicker(10 * time.Millisecond)
+	defer slow.Stop()
+
 	for {
 		n, err := leftover()
 		if err != nil {
@@ -106,7 +111,7 @@ func waitHandled(ran *atomic.Int64, total int, leftover func() (int, error), dea
 		}
 
 		select {
-		case <-tick.C:
+		case <-slow.C:
 		case <-timeout.C:
 			return fmt.Errorf("%d rows still queued %s after the last job", n, deadline)
 		}

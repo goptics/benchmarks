@@ -49,7 +49,12 @@ type bound struct {
 func bind(tb testing.TB, qs sqliteq.Queues, sc scenario, name string, ran *atomic.Int64) bound {
 	tb.Helper()
 
-	w := varmq.NewWorker(func(varmq.Job[int]) { ran.Add(1) }, varmq.WithConcurrency(16))
+	configs := []any{varmq.WithConcurrency(16)}
+	if sc.drain {
+		configs = append(configs, varmq.WithAutoRun(false)) // start() runs it after the fill
+	}
+
+	w := varmq.NewWorker(func(varmq.Job[int]) { ran.Add(1) }, configs...)
 
 	if sc.priority {
 		q, err := qs.NewPriorityQueue(name)
@@ -92,15 +97,7 @@ func openVarMQ(l layout) func(testing.TB, string, scenario, int, *atomic.Int64) 
 		c := &varmqConsumer{qs: openStore(tb, path, l, ckpt), path: path, l: l, drain: sc.drain}
 
 		for i := range sc.queues {
-			bd := bind(tb, c.qs, sc, fmt.Sprintf("q%d", i), ran)
-
-			if sc.drain {
-				if err := bd.worker.Pause(); err != nil {
-					tb.Fatalf("pause: %v", err)
-				}
-			}
-
-			c.bounds = append(c.bounds, bd)
+			c.bounds = append(c.bounds, bind(tb, c.qs, sc, fmt.Sprintf("q%d", i), ran))
 		}
 
 		return c
@@ -109,7 +106,7 @@ func openVarMQ(l layout) func(testing.TB, string, scenario, int, *atomic.Int64) 
 
 func (c *varmqConsumer) add(q, i int) bool { return c.bounds[q].add(i) }
 
-// start resumes the paused workers of a drain run; otherwise they have been
+// start runs the workers of a drain run; a mixed run's workers have been
 // running since NewWorker.
 func (c *varmqConsumer) start() error {
 	if !c.drain {
@@ -117,7 +114,7 @@ func (c *varmqConsumer) start() error {
 	}
 
 	for _, bd := range c.bounds {
-		if err := bd.worker.Resume(); err != nil {
+		if err := bd.worker.Start(); err != nil {
 			return err
 		}
 	}

@@ -82,7 +82,7 @@ func openGoqite(tb testing.TB, dir string, sc scenario, ckpt int, ran *atomic.In
 func (c *goqiteConsumer) add(q, i int) bool {
 	m := goqite.Message{Body: strconv.AppendInt(nil, int64(i), 10)}
 	if c.prio {
-		m.Priority = i % 4 // higher first
+		m.Priority = 3 - i%4 // goqite receives higher first; varmq and River take lower first
 	}
 
 	_, err := jobs.Create(context.Background(), c.queues[q], "bench", m)
