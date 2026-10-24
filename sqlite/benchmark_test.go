@@ -8,16 +8,20 @@ import (
 // checkpoints are the WAL checkpoint page counts every row runs at.
 var checkpoints = []int{1000, 10000}
 
-// BenchmarkSQLite enqueues and drains jobs through a varmq worker bound to a
-// sqliteq queue. Names are <scenario>/<layout>/ckpt<n>.
+// BenchmarkSQLite enqueues and drains jobs through every subject. Names are
+// <scenario>/ckpt<n>/<subject>.
 func BenchmarkSQLite(b *testing.B) {
 	for _, sc := range scenarios {
 		b.Run(sc.name, func(b *testing.B) {
-			for _, l := range sc.layouts {
-				b.Run(l.String(), func(b *testing.B) {
-					for _, ckpt := range checkpoints {
-						b.Run(fmt.Sprintf("ckpt%d", ckpt), func(b *testing.B) {
-							runScenario(b, sc, l, ckpt)
+			for _, ckpt := range checkpoints {
+				b.Run(fmt.Sprintf("ckpt%d", ckpt), func(b *testing.B) {
+					for _, subj := range subjects {
+						if !subj.runs(sc) {
+							continue
+						}
+
+						b.Run(subj.name, func(b *testing.B) {
+							runScenario(b, sc, subj, ckpt)
 						})
 					}
 				})
