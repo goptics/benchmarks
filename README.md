@@ -1,131 +1,64 @@
 # VarMQ Benchmarks
 
-[![Benchmark Charts](https://img.shields.io/badge/%F0%9F%93%8A-Live_Charts-blue?style=for-the-badge)](https://benchmarks.goptics.org)
+[![Live charts](https://img.shields.io/badge/%F0%9F%93%8A-Live_Charts-blue?style=for-the-badge)](https://benchmarks.goptics.org)
 
-How fast is [VarMQ](https://github.com/goptics/varmq) compared to other Go worker pools and job queues, and under which conditions?
-
-This repo answers that with three benchmark suites, fixed workloads, and one live chart site at <https://benchmarks.goptics.org>.
-
-## Vision
-
-Benchmark numbers in library READMEs are easy to cherry-pick. We wanted the opposite:
-
-- **One harness per suite, many subjects.** Every subject in a suite is driven by the exact same code path.
-- **Realistic shapes, not a single number.** A pool that shines with one producer and a million tasks can fall apart with a million producers submitting one task each. We test both ends and the middle.
-- **Overhead in isolation.** With tens or hundreds of thousands of workers a slow pool can hide behind parallelism. A pool of one worker takes that cover away and shows what each pool costs per task.
-- **Reproducible and public.** Raw `go test -bench` output is committed to each suite's `bench/` directory. The site is built from those files, so anyone can see the data behind every bar.
-- **Honest baselines.** In the pool suite, alongside real libraries, we include two hand-rolled channel pools. If a library cannot beat a `for task := range ch` loop, that is worth knowing.
+Benchmark suites for [VarMQ](https://github.com/goptics/varmq) against other Go worker pools and message queues. Raw `go test -bench` output is committed under `<suite>/bench/`; the charts at <https://benchmarks.goptics.org> are built from those files.
 
 ## Suites
 
-| Suite | Module | What is raced | Datasets | README |
-|-------|--------|---------------|----------|--------|
-| Pool | `pool/` | VarMQ and eight other in-process worker pools | [24 CPUs](https://benchmarks.goptics.org/?id=pool-24cpu), [8 CPUs](https://benchmarks.goptics.org/?id=pool-8cpu), [4 CPUs](https://benchmarks.goptics.org/?id=pool-4cpu) | [pool/README.md](pool/README.md) |
-| Redis | `redis/` | VarMQ on Redis against Asynq, rmq, taskq and gocraft/work | [Persistent](https://benchmarks.goptics.org/?id=redis-persistent), [Distributed](https://benchmarks.goptics.org/?id=redis-distributed) | [redis/README.md](redis/README.md) |
-| Sqlite | `sqlite/` | sqliteq driven through a VarMQ worker | [Persistent](https://benchmarks.goptics.org/?id=sqlite-persistent) | [sqlite/README.md](sqlite/README.md) |
+| Suite | Compares | Charts | Details |
+|-------|----------|--------|---------|
+| Worker pool | VarMQ vs Pond, Ants, WorkerPool, Conc, ErrGroup, Gopool and two channel baselines | [24](https://benchmarks.goptics.org/?id=pool-24cpu), [8](https://benchmarks.goptics.org/?id=pool-8cpu), [4 CPUs](https://benchmarks.goptics.org/?id=pool-4cpu) | [pool/README.md](pool/README.md) |
+| Message queue, Redis | VarMQ (redisq) vs Asynq, rmq, taskq, gocraft/work, with one and four consumer processes | [redis](https://benchmarks.goptics.org/?id=redis) | [redis/README.md](redis/README.md) |
+| Message queue, SQLite | VarMQ (sqliteq) vs goqite, backlite, River, at WAL checkpoint 1000 and 10000 pages | [sqlite](https://benchmarks.goptics.org/?id=sqlite) | [sqlite/README.md](sqlite/README.md) |
 
-**Pool.** Nine subjects (VarMQ, Pond, Ants, WorkerPool, Conc, ErrGroup, Gopool and two channel baselines) run the same five workload shapes of 1M tasks, at three pool sizes plus a single worker. The same matrix is recorded at 24, 8 and 4 CPUs, one dataset each.
+## Results
 
-**Redis.** VarMQ's Redis queue (redisq) is raced against Asynq, rmq, taskq and gocraft/work with real consumer processes. The Persistent dataset uses one consumer process and also carries enqueue-only and pickup-latency rows. The Distributed dataset uses four consumer processes.
+Pool and Redis runs of 2026-10-24, SQLite run of 2026-10-25, all `-benchtime=2x`. Full tables in the suite READMEs.
 
-**Sqlite.** sqliteq, the SQLite-backed persistent queue, through a VarMQ worker: one queue, drain, priority and ten queues, with a WAL checkpoint of 1000 and 10000 pages. It has its own module because it needs cgo.
+- Pool: VarMQ is the fastest subject in 40, 36 and 20 of the 55 rows at 24, 8 and 4 CPUs. It is slower than the buffered-channel baseline on the one-worker `Loop10` rows.
+- Redis: with the `Noop` task, VarMQ is first in 2 of the 6 one-process rows and VarMQDistributed in 3 of the 6 four-process rows, every win with 100 producers; gocraft/work leads the single-producer rows. Pickup latency p50: taskq 0.063 ms, VarMQ 0.142 ms, rmq 102.2 ms, Asynq 995.3 ms.
+- SQLite: VarMQ (sqliteq) is first in all 16 rows: on `Mixed1Q` at ckpt1000 it runs 3.1x goqite, 4.8x River and 23x backlite, and ten queues in separate files reach 103,728 jobs/s at ckpt10000.
 
-## How results get published
+## Environment
 
-1. `<module>/bench/*.txt` is raw `go test -bench` output, committed from the reference machine. Benchmarks never run in CI.
-2. `task site:build` converts each file to a dataset JSON with [vizb](https://github.com/goptics/vizb), writes a catalog, and builds one HTML page, all under `worker/public/`.
-3. CI installs vizb through the [vizb action](https://github.com/goptics/vizb), which also writes the page, runs `task site:json` for the datasets, and then `wrangler deploy`. Pull requests build only; the deploy runs on pushes and manual runs on `main`. The workflow is [.github/workflows/site.yml](.github/workflows/site.yml).
-4. A small Cloudflare Worker ([worker/](worker/)) serves the page and the datasets from Workers Static Assets at `benchmarks.goptics.org`.
+Intel Core i7-13700 (24 threads), linux/amd64, Go 1.26.2. Pool suite at GOMAXPROCS 24, 8 and 4. Redis 7.2 (Debian image) pinned to CPU 14, client on the other cores. SQLite databases on ext4 over NVMe.
 
-| URL | Serves |
-|-----|--------|
-| `/` | The dashboard with the dataset switcher. Loads the catalog, then the first dataset |
-| `/?id=<id>` | The same dashboard with one dataset selected, for example `/?id=redis-persistent` |
-| `/<id>` | A single dataset with no switcher |
-| `/dataset` | The catalog, `[{id, name}]` in dashboard order |
-| `/dataset/<id>` | One dataset as JSON |
+| Library | Version |
+|---------|---------|
+| varmq | 415ad73 (unreleased, `replace` in each go.mod) |
+| redisq | v1.5.0 |
+| sqliteq | v0.3.0 |
+| pond | v2.7.2 |
+| ants | v2.12.1 |
+| workerpool | v1.2.2 |
+| conc | v0.3.0 |
+| x/sync (errgroup) | v0.24.0 |
+| bytedance/gopkg (gopool) | v0.1.4 |
+| asynq | v0.26.0 |
+| rmq | v5.2.0 |
+| taskq | v3.2.9 |
+| gocraft/work | v0.5.1 |
+| goqite | v0.4.0 |
+| backlite | v0.8.0 |
+| river | v0.49.0 |
 
-The dataset ids are `pool-24cpu`, `pool-8cpu`, `pool-4cpu`, `redis-persistent`, `redis-distributed` and `sqlite-persistent`. Only the latest run of each is kept.
+## Running
 
-Deploying needs two GitHub secrets:
-
-- `CLOUDFLARE_API_TOKEN` with Workers Scripts: Edit, plus Zone goptics.org: DNS Edit and Workers Routes Edit for the custom domain.
-- `CLOUDFLARE_ACCOUNT_ID`.
-
-## Running it yourself
-
-Requires Go 1.26+, [Task](https://taskfile.dev), [vizb](https://github.com/goptics/vizb) and `jq`. Redis suite: Docker. Sqlite suite: a C compiler. `task site:dev`: Node.
-
-```bash
-# every task, per suite and for the site
-task --list
-```
+Needs Go 1.26+ and [Task](https://taskfile.dev); Docker for the Redis suite; a C compiler for the SQLite suite; [vizb](https://github.com/goptics/vizb) and `jq` for `task site:preview`.
 
 ```bash
-# one iteration of every pool benchmark
-task pool:bench
-```
-
-```bash
-# one iteration of every Redis benchmark (starts Redis on localhost:6390 first)
-task redis:up redis:bench
-# stop it afterwards with task redis:down
-```
-
-```bash
-# one iteration of every sqlite scenario
+task --list                          # every task
+task pool:bench                      # one iteration of every pool benchmark
+task redis:up redis:bench redis:down
 task sqlite:bench
+task pool:txt                        # full run into pool/bench/ (hours); also redis:txt, sqlite:txt
+task report                          # every suite, then the local preview
+task site:preview                    # all datasets in one local HTML
 ```
 
-```bash
-# build all six datasets from bench/*.txt into one HTML, no Worker
-task site:preview
-```
-
-```bash
-# build against localhost:8787 and run the Worker with wrangler dev
-task site:dev
-```
-
-```bash
-# regenerate every bench/*.txt (hours), then open the local preview
-task report
-```
-
-To run a slice, call `go test` inside the suite's module:
-
-```bash
-# pool: Loop10 task, 50K workers, 100 producers, only the baselines
-cd pool && go test -run xxx -bench 'Tasks/Loop10W50K/100u-10Kt/(GoroutinePool|BufferedPool)$' -benchtime=1x
-```
-
-```bash
-# pool: only the pool of one worker, every task, workload and subject (about 40 s)
-cd pool && go test -run xxx -bench 'Tasks/W1$' -benchtime=1x
-```
-
-```bash
-# redis: one Durable cell, needs task redis:up
-cd redis && go test -run xxx -bench 'Durable/NoopW10C1' -benchtime=1x -timeout 0
-```
-
-```bash
-# sqlite: one scenario
-cd sqlite && go test -run xxx -bench 'SQLite/Mixed10Q' -benchtime=1x
-```
-
-## Layout
-
-| Path | Purpose |
-|------|---------|
-| `pool/` | Pool suite: its own Go module, `bench/pool-{24,8,4}cpu.txt`, Taskfile and README |
-| `redis/` | Redis suite: its own Go module, `compose.yml`, `bench/redis.txt`, Taskfile and README |
-| `sqlite/` | Sqlite suite: its own Go module, `bench/sqlite.txt`, Taskfile and README |
-| `worker/` | Cloudflare Worker (`worker.js`, `wrangler.jsonc`). `worker/public/` is build output and gitignored |
-| `dist/` | Local preview from `task site:preview`. Gitignored |
-| `Taskfile.yml` | Includes the three suite Taskfiles, plus `site:*`, `report` and `clean` |
-| `.github/workflows/site.yml` | Site build and deploy |
+Each suite README shows how to run one slice with `go test -bench`. Pushes to `main` rebuild and deploy the charts; see [worker/README.md](worker/README.md).
 
 ## License
 
-MIT. See [LICENSE](LICENSE).
+MIT, see [LICENSE](LICENSE). The pool harness started from [alitto/pond-benchmarks](https://github.com/alitto/pond-benchmarks).

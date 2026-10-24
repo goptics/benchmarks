@@ -10,13 +10,13 @@ vars:
   DATA: worker/public/data
   DATA_URL: https://benchmarks.goptics.org/dataset
   BAR: vizb bar -p /n/y/x -T s -M MB --round -l --border-radius 8,8,0,0
-  # keep in step with redis/subjects.go: a subject missing here is dropped from redis-persistent
+  # C1, Enqueue and Latency groups race VarMQ's persistent queue against these;
+  # VarMQDistributed only appears in the C4 groups. Keep in step with redis/subjects.go.
   SUBJECTS: '(VarMQ|Asynq|Rmq|Taskq|GocraftWork)'
   # catalog order = dashboard order; listed literally (a glob sorts 4cpu before 24cpu)
   JSONS: >-
     worker/public/data/pool-24cpu.json worker/public/data/pool-8cpu.json worker/public/data/pool-4cpu.json
-    worker/public/data/redis-persistent.json worker/public/data/redis-distributed.json
-    worker/public/data/sqlite-persistent.json
+    worker/public/data/redis.json worker/public/data/sqlite.json
 
 tasks:
   default:
@@ -27,24 +27,19 @@ tasks:
     desc: Convert every bench txt to dataset JSON plus the catalog
     cmds:
       - rm -rf {{.DATA}} && mkdir -p {{.DATA}}
-      - '{{.BAR}} --stack pool/bench/pool-24cpu.txt -n "Pool (24 CPUs)" --id pool-24cpu -d "9 Go worker pools, 5 workload shapes, 1M tasks, GOMAXPROCS 24" -o {{.DATA}}/pool-24cpu.json'
-      - '{{.BAR}} --stack pool/bench/pool-8cpu.txt  -n "Pool (8 CPUs)"  --id pool-8cpu  -d "Same matrix at GOMAXPROCS 8" -o {{.DATA}}/pool-8cpu.json'
-      - '{{.BAR}} --stack pool/bench/pool-4cpu.txt  -n "Pool (4 CPUs)"  --id pool-4cpu  -d "Same matrix at GOMAXPROCS 4" -o {{.DATA}}/pool-4cpu.json'
+      - '{{.BAR}} --stack pool/bench/pool-24cpu.txt -n "Worker Pool (24 CPUs)" --id pool-24cpu -d "9 Go worker pools, 5 workload shapes, 1M tasks, GOMAXPROCS 24" -o {{.DATA}}/pool-24cpu.json'
+      - '{{.BAR}} --stack pool/bench/pool-8cpu.txt  -n "Worker Pool (8 CPUs)"  --id pool-8cpu  -d "Same matrix at GOMAXPROCS 8" -o {{.DATA}}/pool-8cpu.json'
+      - '{{.BAR}} --stack pool/bench/pool-4cpu.txt  -n "Worker Pool (4 CPUs)"  --id pool-4cpu  -d "Same matrix at GOMAXPROCS 4" -o {{.DATA}}/pool-4cpu.json'
       - >-
-        {{.BAR}} --stack redis/bench/redis.txt -n "Redis (Persistent)" --id redis-persistent
-        -d "One consumer process: VarMQ persistent queue vs Asynq, rmq, taskq, gocraft/work; plus enqueue-only and pickup latency"
-        -f '^(Benchmark)?(Durable/[^/]+C1|Enqueue/Enqueue|Latency/[^/]+)/[^/]+/{{.SUBJECTS}}$'
+        {{.BAR}} --stack redis/bench/redis.txt -n "Message Queue Redis" --id redis
+        -d "VarMQ (redisq) vs Asynq, rmq, taskq, gocraft/work on Redis 7.2. C1 groups: one consumer process; C4: four. Plus enqueue-only and pickup latency"
+        -f '^(Benchmark)?((Durable/[^/]+C1|Enqueue/Enqueue|Latency/[^/]+)/[^/]+/{{.SUBJECTS}}$|Durable/[^/]+C4/)'
         --better p50-ms:low,p99-ms:low,max-ms:low
-        -o {{.DATA}}/redis-persistent.json
+        -o {{.DATA}}/redis.json
       - >-
-        {{.BAR}} --stack redis/bench/redis.txt -n "Redis (Distributed)" --id redis-distributed
-        -d "Four consumer processes: VarMQ distributed queue vs Asynq, rmq, taskq, gocraft/work"
-        -f '^(Benchmark)?Durable/[^/]+C4/'
-        -o {{.DATA}}/redis-distributed.json
-      - >-
-        {{.BAR}} --stack sqlite/bench/sqlite.txt -n "Sqlite (Persistent)" --id sqlite-persistent
-        -d "sqliteq through a VarMQ worker: one queue, drain, priority, ten queues; WAL checkpoint 1000 vs 10000 pages"
-        --better walMB:low -o {{.DATA}}/sqlite-persistent.json
+        {{.BAR}} --stack sqlite/bench/sqlite.txt -n "Message Queue SQLite" --id sqlite
+        -d "VarMQ (sqliteq) vs goqite, backlite, River on SQLite: one queue, drain, priority, ten queues; WAL checkpoint 1000 vs 10000 pages"
+        --better walMB:low -o {{.DATA}}/sqlite.json
       - jq -se 'all(.data | length > 0)' {{.JSONS}}
       - jq -s 'map({id, name})' {{.JSONS}} > {{.DATA}}/_catalog.json
 
@@ -62,7 +57,7 @@ tasks:
         vars: { DATA_URL: '{{.DATA_URL}}' }
 
   site:preview:
-    desc: Same six datasets embedded in one HTML, no Worker
+    desc: Every dataset embedded in one HTML, no Worker
     cmds:
       - task: site:json
       - mkdir -p dist
