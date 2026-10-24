@@ -5,47 +5,46 @@ Chart: https://benchmarks.goptics.org/?id=redis
 
 ## Results
 
-Run of 2026-10-24: varmq 415ad73 (unreleased, `replace` in go.mod), redisq v1.5.0, `-benchtime=2x`, Redis 7.2 (Debian image) pinned to one core, 150 rows in `bench/redis.txt`.
+Run of 2026-10-25: varmq 415ad73 (unreleased, `replace` in go.mod), redisq v1.5.0, `-benchtime=2x`, Redis 7.2 (Debian image) pinned to one core, 150 rows in `bench/redis.txt`.
 
 `C1`: jobs/s, `Noop` task, one consumer process.
 
 | Row | VarMQ | Asynq | Rmq | Taskq | GocraftWork |
 |---|---:|---:|---:|---:|---:|
-| NoopW10C1 / 1u-100Kt | 21,459 | 15,988 | 6,195 | 18,963 | 25,057 |
-| NoopW10C1 / 100u-1Kt | 41,972 | 18,030 | 5,933 | 35,648 | 49,503 |
-| NoopW100C1 / 1u-100Kt | 20,859 | 16,978 | 6,129 | 18,439 | 25,315 |
-| NoopW100C1 / 100u-1Kt | 60,551 | 19,828 | 5,859 | 35,560 | 45,110 |
-| NoopW1000C1 / 1u-100Kt | 21,027 | 15,484 | 10,271 | 16,939 | 24,912 |
-| NoopW1000C1 / 100u-1Kt | 59,182 | 18,693 | 9,317 | 28,531 | 40,710 |
+| NoopW10C1 / 1u-100Kt | 21,108 | 15,390 | 33,195 | 18,853 | 24,935 |
+| NoopW10C1 / 100u-1Kt | 41,970 | 17,604 | 28,880 | 34,628 | 49,213 |
+| NoopW100C1 / 1u-100Kt | 20,665 | 17,048 | 33,439 | 18,352 | 24,990 |
+| NoopW100C1 / 100u-1Kt | 60,025 | 19,439 | 29,022 | 34,578 | 44,659 |
+| NoopW1000C1 / 1u-100Kt | 19,710 | 16,467 | 32,678 | 16,674 | 24,408 |
+| NoopW1000C1 / 100u-1Kt | 58,523 | 17,932 | 27,349 | 28,638 | 40,679 |
 
 `C4`: jobs/s, `Noop` task, four consumer processes.
 
 | Row | VarMQDistributed | Asynq | Rmq | Taskq | GocraftWork |
 |---|---:|---:|---:|---:|---:|
-| NoopW10C4 / 1u-100Kt | 21,946 | 13,057 | 21,816 | 10,968 | 25,650 |
-| NoopW10C4 / 100u-1Kt | 55,294 | 19,377 | 16,459 | 17,191 | 48,839 |
-| NoopW100C4 / 1u-100Kt | 22,484 | 13,135 | 22,400 | 10,629 | 25,512 |
-| NoopW100C4 / 100u-1Kt | 65,606 | 21,198 | 16,889 | 16,018 | 43,263 |
-| NoopW1000C4 / 1u-100Kt | 22,347 | 14,519 | 23,041 | 7,663 | 19,542 |
-| NoopW1000C4 / 100u-1Kt | 64,993 | 16,488 | 25,137 | 11,377 | 32,672 |
+| NoopW10C4 / 1u-100Kt | 22,057 | 11,896 | 29,616 | 10,904 | 24,339 |
+| NoopW10C4 / 100u-1Kt | 53,754 | 20,889 | 59,649 | 17,323 | 48,722 |
+| NoopW100C4 / 1u-100Kt | 22,263 | 13,350 | 29,953 | 10,576 | 23,683 |
+| NoopW100C4 / 100u-1Kt | 63,710 | 22,677 | 58,620 | 16,077 | 41,730 |
+| NoopW1000C4 / 1u-100Kt | 22,231 | 12,747 | 27,784 | 8,267 | 21,068 |
+| NoopW1000C4 / 100u-1Kt | 64,281 | 19,119 | 52,549 | 11,100 | 36,809 |
 
 `Sleep1ms` rows are bound by workers x 1 ms and are only on the chart.
 
-Enqueue only (`BenchmarkEnqueue`, jobs/s): VarMQ 42,867 at one producer, the best of the six; at 100 producers Rmq 202,068, GocraftWork 201,297 and VarMQ 201,078 tie, and VarMQDistributed trails at 143,183.
+Enqueue only (`BenchmarkEnqueue`, jobs/s): at one producer VarMQ 37,292, Rmq 33,394, GocraftWork 29,720, VarMQDistributed 27,183, Taskq 26,780, Asynq 24,023; at 100 producers VarMQ 207,752, GocraftWork 202,835, Rmq 197,240, Taskq 188,437, VarMQDistributed 144,838, Asynq 121,046.
 
 Pickup latency (`BenchmarkLatency`, 1,000 jobs one at a time, ms):
 
 | Subject | p50 | p99 | max |
 |---|---|---|---|
-| Taskq | 0.06330 | 0.1897 | 0.6119 |
-| GocraftWork | 0.09234 | 0.4743 | 10.80 |
-| VarMQ | 0.1425 | 0.3843 | 3.583 |
-| VarMQDistributed | 0.1457 | 0.5407 | 2.183 |
-| Rmq | 102.2 | 112.3 | 113.3 |
-| Asynq | 995.3 | 1492 | 1507 |
+| Taskq | 0.03876 | 0.1623 | 3.195 |
+| VarMQDistributed | 0.06492 | 0.2351 | 2.436 |
+| VarMQ | 0.09407 | 0.5321 | 3.431 |
+| GocraftWork | 0.1274 | 0.5047 | 10.94 |
+| Rmq | 1.464 | 2.891 | 6.902 |
+| Asynq | 979.7 | 1491 | 1501 |
 
-Rmq's 100 ms poll and Asynq's 0.5 to 1.5 s idle sleep show directly. VarMQ's
-batch pop p50 is 0.1425 ms against Taskq's 0.06330 ms for its blocking `XREADGROUP`.
+Asynq's 0.5 to 1.5 s idle sleep shows directly, and rmq's 1 ms poll puts it at 1.464 ms. Taskq's blocking `XREADGROUP` is the fastest pickup at 0.03876 ms; VarMQ's batch pop is at 0.09407 ms and VarMQDistributed's push wake at 0.06492 ms.
 
 In `C4` rows the four instances are stopped one after another inside the timed region, so Asynq and Taskq pay their idle poll up to four times.
 

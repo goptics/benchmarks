@@ -14,15 +14,15 @@ Benchmark suites for [VarMQ](https://github.com/goptics/varmq) against other Go 
 
 ## Results
 
-Pool and Redis runs of 2026-10-24, SQLite run of 2026-10-25, all `-benchtime=2x`. Full tables in the suite READMEs.
+Pool run of 2026-10-24, Redis and SQLite runs of 2026-10-25, all `-benchtime=2x`. Full tables in the suite READMEs.
 
-- Pool: VarMQ is the fastest subject in 40, 36 and 20 of the 55 rows at 24, 8 and 4 CPUs. It is slower than the buffered-channel baseline on the one-worker `Loop10` rows.
-- Redis: with the `Noop` task, VarMQ is first in 2 of the 6 one-process rows and VarMQDistributed in 3 of the 6 four-process rows, every win with 100 producers; gocraft/work leads the single-producer rows. Pickup latency p50: taskq 0.063 ms, VarMQ 0.142 ms, rmq 102.2 ms, Asynq 995.3 ms.
+- Pool: VarMQ is the fastest subject in 40, 36 and 20 of the 55 rows at 24, 8 and 4 CPUs. It is slower than the buffered-channel baseline on the one-worker `Loop10` rows, except `1Mu-1t`, where the two are level.
+- Redis: with the `Noop` task, VarMQ is first in 2 of the 6 one-process rows and VarMQDistributed in 2 of the 6 four-process rows, all at 100 producers; rmq leads every single-producer row. Pickup latency p50: taskq 0.03876 ms, VarMQDistributed 0.06492 ms, VarMQ 0.09407 ms, rmq 1.464 ms, Asynq 979.7 ms.
 - SQLite: VarMQ (sqliteq) is first in all 16 rows: on `Mixed1Q` at ckpt1000 it runs 3.1x goqite, 4.8x River and 23x backlite, and ten queues in separate files reach 103,728 jobs/s at ckpt10000.
 
 ## Environment
 
-Intel Core i7-13700 (24 threads), linux/amd64, Go 1.26.2. Pool suite at GOMAXPROCS 24, 8 and 4. Redis 7.2 (Debian image) pinned to CPU 14, client on the other cores. SQLite databases on ext4 over NVMe.
+Intel Core i7-13700 (24 threads), linux/amd64, Go 1.26.2. Pool suite at GOMAXPROCS 24, 8 and 4. Redis 7.2 (Debian image) pinned to CPU 14, client on cores 0-13 and 16-23. SQLite databases on ext4 over NVMe.
 
 | Library | Version |
 |---------|---------|
