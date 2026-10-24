@@ -34,7 +34,7 @@ Benchmark numbers in library READMEs are easy to cherry-pick. We wanted the oppo
 
 1. `<module>/bench/*.txt` is raw `go test -bench` output, committed from the reference machine. Benchmarks never run in CI.
 2. `task site:build` converts each file to a dataset JSON with [vizb](https://github.com/goptics/vizb), writes a catalog, and builds one HTML page, all under `worker/public/`.
-3. CI runs `task site:build` and then `wrangler deploy`. Pull requests build only; the deploy runs on pushes and manual runs on `main`. The workflow is [.github/workflows/site.yml](.github/workflows/site.yml).
+3. CI installs vizb through the [vizb action](https://github.com/goptics/vizb), which also writes the page, runs `task site:json` for the datasets, and then `wrangler deploy`. Pull requests build only; the deploy runs on pushes and manual runs on `main`. The workflow is [.github/workflows/site.yml](.github/workflows/site.yml).
 4. A small Cloudflare Worker ([worker/](worker/)) serves the page and the datasets from Workers Static Assets at `benchmarks.goptics.org`.
 
 | URL | Serves |

@@ -23,10 +23,12 @@ jobs:
           sh -c "$(curl -fsSL https://taskfile.dev/install.sh)" -- -d -b "$HOME/.local/bin" v3.50.0
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
           mkdir -p worker/public
-      # installs the latest vizb v0.x (cached) and builds the lazy-catalog page;
-      # the binary stays on PATH for the conversions below
+      # installs vizb (cached) and builds the lazy-catalog page; the binary stays
+      # on PATH for the conversions below. Exact tag for now: the v0 major tag in
+      # goptics/vizb still points at a May 2026 action without data-url; switch
+      # back to goptics/vizb@v0 once the release workflow moves it.
       - if: hashFiles('pool/bench/*.txt', 'redis/bench/*.txt', 'sqlite/bench/*.txt') != ''
-        uses: goptics/vizb@v0
+        uses: goptics/vizb@v0.23.0
         with:
           data-url: https://benchmarks.goptics.org/dataset
           charts: bar
