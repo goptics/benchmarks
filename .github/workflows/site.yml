@@ -21,10 +21,18 @@ jobs:
       - if: hashFiles('pool/bench/*.txt', 'redis/bench/*.txt', 'sqlite/bench/*.txt') != ''
         run: |
           sh -c "$(curl -fsSL https://taskfile.dev/install.sh)" -- -d -b "$HOME/.local/bin" v3.50.0
-          VIZB_RELEASE_TAG=v0.23.0 bash -c "$(curl -fsSL https://vizb.goptics.org/install.sh)"
           echo "$HOME/.local/bin" >> "$GITHUB_PATH"
+          mkdir -p worker/public
+      # installs the latest vizb v0.x (cached) and builds the lazy-catalog page;
+      # the binary stays on PATH for the conversions below
       - if: hashFiles('pool/bench/*.txt', 'redis/bench/*.txt', 'sqlite/bench/*.txt') != ''
-        run: task site:build
+        uses: goptics/vizb@v0
+        with:
+          data-url: https://benchmarks.goptics.org/dataset
+          charts: bar
+          output-html: worker/public/index.html
+      - if: hashFiles('pool/bench/*.txt', 'redis/bench/*.txt', 'sqlite/bench/*.txt') != ''
+        run: task site:json
       - if: hashFiles('pool/bench/*.txt', 'redis/bench/*.txt', 'sqlite/bench/*.txt') != '' && github.event_name != 'pull_request' && github.ref == 'refs/heads/main'
         uses: cloudflare/wrangler-action@v3
         with:
