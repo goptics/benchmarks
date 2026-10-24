@@ -32,7 +32,9 @@ var scenarios = []scenario{
 	{name: "Mixed1Q", queues: 1, producers: 4, total: 20000, layouts: []layout{singleFile}},
 	{name: "Drain1Q", queues: 1, producers: 4, total: 20000, drain: true, layouts: []layout{singleFile}},
 	{name: "DrainPrio", queues: 1, producers: 4, total: 10000, drain: true, priority: true, layouts: []layout{singleFile}},
-	{name: "Mixed10Q", queues: 10, producers: 1, total: 20000, layouts: []layout{folder, singleFile}},
+	// SingleFile first: vizb orders chart series by the first layout seen in
+	// the whole file, and the one-queue scenarios only have SingleFile.
+	{name: "Mixed10Q", queues: 10, producers: 1, total: 20000, layouts: []layout{singleFile, folder}},
 }
 
 // benchRoot is where the benchmark databases live. They must be on a real disk:
