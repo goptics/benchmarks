@@ -1,40 +1,19 @@
 package sqlite
 
 import (
-	"database/sql"
-	"fmt"
 	"os"
 	"path/filepath"
 	"sync"
 	"sync/atomic"
 	"testing"
 	"time"
-
-	"github.com/goptics/sqliteq"
-	"github.com/goptics/varmq"
-	_ "github.com/mattn/go-sqlite3"
 )
 
-// scenario is one row of the benchmark matrix.
-type scenario struct {
-	name      string
-	queues    int
-	producers int  // per queue
-	total     int  // jobs over all queues
-	drain     bool // pause the worker, add everything, then time the drain
-	priority  bool
-	layouts   []layout
-}
-
-func (sc scenario) perProducer() int { return sc.total / sc.queues / sc.producers }
-
 var scenarios = []scenario{
-	{name: "Mixed1Q", queues: 1, producers: 4, total: 20000, layouts: []layout{singleFile}},
-	{name: "Drain1Q", queues: 1, producers: 4, total: 20000, drain: true, layouts: []layout{singleFile}},
-	{name: "DrainPrio", queues: 1, producers: 4, total: 10000, drain: true, priority: true, layouts: []layout{singleFile}},
-	// SingleFile first: vizb orders chart series by the first layout seen in
-	// the whole file, and the one-queue scenarios only have SingleFile.
-	{name: "Mixed10Q", queues: 10, producers: 1, total: 20000, layouts: []layout{singleFile, folder}},
+	{name: "Mixed1Q", queues: 1, producers: 4, total: 20000},
+	{name: "Drain1Q", queues: 1, producers: 4, total: 20000, drain: true},
+	{name: "DrainPrio", queues: 1, producers: 4, total: 10000, drain: true, priority: true},
+	{name: "Mixed10Q", queues: 10, producers: 1, total: 20000},
 }
 
 // benchRoot is where the benchmark databases live. They must be on a real disk:
@@ -73,55 +52,23 @@ func freshDir(tb testing.TB) string {
 	return dir
 }
 
-// waitDeadline bounds how long one iteration waits for its workers to drain,
+// waitDeadline bounds how long one iteration waits for its consumer to drain,
 // so a stuck job fails its row instead of hanging the whole run.
 const waitDeadline = 5 * time.Minute
 
-// bound is one queue with its worker.
-type bound struct {
-	worker varmq.Worker
-	add    func(i int) bool // enqueues job number i
-}
-
-func bind(tb testing.TB, qs sqliteq.Queues, sc scenario, name string, ran *atomic.Int64) bound {
-	tb.Helper()
-
-	w := varmq.NewWorker(func(varmq.Job[int]) { ran.Add(1) }, varmq.WithConcurrency(16))
-
-	if sc.priority {
-		q, err := qs.NewPriorityQueue(name)
-		if err != nil {
-			tb.Fatal(err)
-		}
-
-		pq := w.WithPersistentPriorityQueue(q)
-
-		return bound{worker: pq.Worker(), add: func(i int) bool { return pq.Add(i, i%4) }}
-	}
-
-	q, err := qs.NewQueue(name)
-	if err != nil {
-		tb.Fatal(err)
-	}
-
-	pq := w.WithPersistentQueue(q)
-
-	return bound{worker: pq.Worker(), add: func(i int) bool { return pq.Add(i) }}
-}
-
 // runScenario runs sc b.N times, each on a fresh database, and reports jobs/s
 // over the timed part only: setup, teardown and the leftover check are not
-// timed. Mixed times the first Add to Wait. Drain times Resume to Wait. It
-// also reports walMB, the largest size any one -wal file reached in any
-// iteration, untimed parts included.
-func runScenario(b *testing.B, sc scenario, l layout, ckpt int) {
+// timed. Mixed times the first add to the last job handled. Drain times the
+// consumer start to the last job handled. It also reports walMB, the largest
+// size any one -wal file reached in any iteration, untimed parts included.
+func runScenario(b *testing.B, sc scenario, subj subject, ckpt int) {
 	b.Helper()
 
 	var walPeak int64
 
 	for range b.N {
 		b.StopTimer()
-		walPeak = max(walPeak, runOnce(b, sc, l, ckpt))
+		walPeak = max(walPeak, runOnce(b, sc, subj, ckpt))
 	}
 
 	if sec := b.Elapsed().Seconds(); sec > 0 {
@@ -181,84 +128,39 @@ func sampleWAL(dir string) (stop func() int64) {
 }
 
 // runOnce runs one iteration and returns its WAL peak in bytes.
-func runOnce(b *testing.B, sc scenario, l layout, ckpt int) int64 {
+func runOnce(b *testing.B, sc scenario, subj subject, ckpt int) int64 {
 	b.Helper()
 
 	dir := freshDir(b)
 
-	path := dir
-	if l == singleFile {
-		path = filepath.Join(dir, "bench.db")
-	}
+	var ran atomic.Int64 // handler runs over all queues
 
-	qs := openStore(b, path, l, ckpt)
+	c := subj.open(b, dir, sc, ckpt, &ran)
 
 	stopWAL := sampleWAL(dir)
 	defer stopWAL() // a failed iteration still stops the sampler
 
-	var ran atomic.Int64 // handler runs over all queues
-
-	bounds := make([]bound, sc.queues)
-	for i := range bounds {
-		bounds[i] = bind(b, qs, sc, fmt.Sprintf("q%d", i), &ran)
-
-		if sc.drain {
-			if err := bounds[i].worker.Pause(); err != nil {
-				b.Fatalf("pause: %v", err)
-			}
-		}
-	}
-
-	var (
-		wg     sync.WaitGroup
-		failed atomic.Int64
-	)
-
-	produce := func() {
-		for _, bd := range bounds {
-			for p := range sc.producers {
-				wg.Go(func() {
-					for j := range sc.perProducer() {
-						if !bd.add(p*sc.perProducer() + j) {
-							failed.Add(1)
-						}
-					}
-				})
-			}
-		}
-
-		wg.Wait()
-	}
+	var failed int64
 
 	if sc.drain {
-		produce()
+		failed = produce(c, sc)
 		b.StartTimer()
 
-		for _, bd := range bounds {
-			if err := bd.worker.Resume(); err != nil {
-				b.Fatalf("resume: %v", err)
-			}
+		if err := c.start(); err != nil {
+			b.Fatalf("start: %v", err)
 		}
 	} else {
+		if err := c.start(); err != nil {
+			b.Fatalf("start: %v", err)
+		}
+
 		b.StartTimer()
-		produce()
+		failed = produce(c, sc)
 	}
 
-	waited := make(chan struct{})
-
-	go func() {
-		defer close(waited)
-
-		for _, bd := range bounds {
-			bd.worker.Wait()
-		}
-	}()
-
-	select {
-	case <-waited:
-	case <-time.After(waitDeadline):
+	if err := c.wait(waitDeadline); err != nil {
 		b.StopTimer()
-		b.Fatalf("%s: workers still busy %s after the last Add: a job is stuck", sc.name, waitDeadline)
+		b.Fatalf("%s: %v: a job is stuck", sc.name, err)
 	}
 
 	b.StopTimer()
@@ -267,98 +169,22 @@ func runOnce(b *testing.B, sc scenario, l layout, ckpt int) int64 {
 		b.Fatalf("%s: handler ran %d times, want %d: a job was lost or run twice", sc.name, n, sc.total)
 	}
 
-	if n := failed.Load(); n > 0 {
-		b.Fatalf("%d Add calls returned false", n)
+	if failed > 0 {
+		b.Fatalf("%d adds failed", failed)
 	}
 
-	if left, err := rowsLeft(path, l, sc.queues); err != nil {
+	if left, err := c.leftover(); err != nil {
 		b.Fatalf("count leftover rows: %v", err)
 	} else if left > 0 {
-		b.Fatalf("%d rows left in the queue tables after Wait", left)
-	}
-
-	for _, bd := range bounds {
-		if err := bd.worker.WaitAndStop(); err != nil {
-			b.Fatalf("stop: %v", err)
-		}
+		b.Fatalf("%d rows left in the queue tables", left)
 	}
 
 	// Closing checkpoints and removes the WAL, so the sampling stops first
 	walPeak := stopWAL()
 
-	if err := qs.Close(); err != nil {
-		b.Fatalf("close store: %v", err)
+	if err := c.close(); err != nil {
+		b.Fatalf("close: %v", err)
 	}
 
 	return walPeak
-}
-
-// rowsLeft counts the rows in every table of the store's database files, read
-// with database/sql directly. It fails when it finds fewer than queues tables,
-// so a check that looked at nothing cannot pass.
-func rowsLeft(path string, l layout, queues int) (rows int, err error) {
-	files := []string{path}
-
-	if l == folder {
-		if files, err = filepath.Glob(filepath.Join(path, "*.db")); err != nil {
-			return 0, err
-		}
-	}
-
-	tables := 0
-
-	for _, f := range files {
-		db, err := sql.Open("sqlite3", f)
-		if err != nil {
-			return 0, err
-		}
-
-		names, err := tableNames(db)
-		if err != nil {
-			db.Close()
-
-			return 0, err
-		}
-
-		for _, t := range names {
-			var n int
-			if err := db.QueryRow(`SELECT COUNT(*) FROM "` + t + `"`).Scan(&n); err != nil {
-				db.Close()
-
-				return 0, err
-			}
-
-			rows += n
-			tables++
-		}
-
-		db.Close()
-	}
-
-	if tables < queues {
-		return 0, fmt.Errorf("found %d queue tables, want at least %d", tables, queues)
-	}
-
-	return rows, nil
-}
-
-func tableNames(db *sql.DB) ([]string, error) {
-	r, err := db.Query(`SELECT name FROM sqlite_master WHERE type = 'table' AND name NOT LIKE 'sqlite_%'`)
-	if err != nil {
-		return nil, err
-	}
-	defer r.Close()
-
-	var names []string
-
-	for r.Next() {
-		var n string
-		if err := r.Scan(&n); err != nil {
-			return nil, err
-		}
-
-		names = append(names, n)
-	}
-
-	return names, r.Err()
 }
