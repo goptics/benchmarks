@@ -13,7 +13,7 @@ tasks:
       - go test -run xxx -bench . -benchtime=1x -timeout 0
 
   txt:
-    desc: Full run into bench/sqlite.txt (real disk; SQLITEQ_BENCH_DIR picks it; about 30 min)
+    desc: Full run into bench/sqlite.txt (real disk; SQLITEQ_BENCH_DIR picks it; about 20 min)
     cmds:
       - mkdir -p bench
       - set -o pipefail; go test -run xxx -bench . -benchtime=2x -timeout 0 | tee bench/sqlite.txt

@@ -3,6 +3,7 @@ package sqlite
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"log/slog"
 	"path/filepath"
@@ -68,18 +69,19 @@ func openRiver(tb testing.TB, dir string, sc scenario, ckpt int, ran *atomic.Int
 
 	queues := make(map[string]river.QueueConfig, sc.queues)
 	for i := range sc.queues {
-		queues[fmt.Sprintf("q%d", i)] = river.QueueConfig{MaxWorkers: 16}
+		// Forced: a queue's producer fetches at most MaxWorkers jobs, then waits
+		// FetchCooldown before the next fetch, so the default 100 ms caps 16
+		// workers at 160 jobs/s whatever the database does. The 1 ms minimum
+		// lets SQLite and River's own per-job work set the number. It is set per
+		// queue so the client-level value, which also paces River's
+		// insert-notification writes, stays at its default.
+		queues[fmt.Sprintf("q%d", i)] = river.QueueConfig{MaxWorkers: 16, FetchCooldown: river.FetchCooldownMin}
 	}
 
 	client, err := river.NewClient(driver, &river.Config{
-		// Forced: River fetches at most MaxWorkers jobs, then waits FetchCooldown
-		// before the next fetch, so the default 100 ms caps 16 workers at 160
-		// jobs/s whatever the database does. The 1 ms minimum lets SQLite and
-		// River's own per-job work set the number instead.
-		FetchCooldown: river.FetchCooldownMin,
-		Logger:        slog.New(slog.DiscardHandler),
-		Queues:        queues,
-		Workers:       workers,
+		Logger:  slog.New(slog.DiscardHandler),
+		Queues:  queues,
+		Workers: workers,
 	})
 	if err != nil {
 		tb.Fatalf("river client: %v", err)
@@ -116,14 +118,14 @@ func (c *riverConsumer) leftover() (int, error) {
 }
 
 func (c *riverConsumer) close() error {
+	var err error
+
 	if c.started {
 		ctx, cancel := context.WithTimeout(context.Background(), time.Minute)
 		defer cancel()
 
-		if err := c.client.Stop(ctx); err != nil {
-			return err
-		}
+		err = c.client.Stop(ctx)
 	}
 
-	return c.db.Close()
+	return errors.Join(err, c.db.Close())
 }

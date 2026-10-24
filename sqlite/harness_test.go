@@ -58,9 +58,10 @@ const waitDeadline = 5 * time.Minute
 
 // runScenario runs sc b.N times, each on a fresh database, and reports jobs/s
 // over the timed part only: setup, teardown and the leftover check are not
-// timed. Mixed times the first add to the last job handled. Drain times the
-// consumer start to the last job handled. It also reports walMB, the largest
-// size any one -wal file reached in any iteration, untimed parts included.
+// timed. Mixed times the first add to the last job acknowledged. Drain times
+// the consumer start to the last job acknowledged. It also reports walMB, the
+// largest total size the run's -wal files reached in any iteration, untimed
+// parts included.
 func runScenario(b *testing.B, sc scenario, subj subject, ckpt int) {
 	b.Helper()
 
@@ -81,20 +82,26 @@ func runScenario(b *testing.B, sc scenario, subj subject, ckpt int) {
 // walSampleEvery is how often sampleWAL reads the -wal file sizes.
 const walSampleEvery = 50 * time.Millisecond
 
-// sampleWAL reads the size of every -wal file in dir every walSampleEvery, on
-// its own goroutine, until the returned stop is called. stop takes one last
-// sample and returns the largest size any one file reached; it may be called
-// more than once.
+// sampleWAL reads the total size of the -wal files in dir every
+// walSampleEvery, on its own goroutine, until the returned stop is called.
+// stop takes one last sample and returns the largest total seen; it may be
+// called more than once. The total, not the largest file, so a subject with
+// one file per queue is measured like one with every queue in one file.
 func sampleWAL(dir string) (stop func() int64) {
 	var peak int64 // owned by the goroutine until done closes
 
 	sample := func() {
 		files, _ := filepath.Glob(filepath.Join(dir, "*-wal"))
+
+		var total int64
+
 		for _, f := range files {
 			if fi, err := os.Stat(f); err == nil {
-				peak = max(peak, fi.Size())
+				total += fi.Size()
 			}
 		}
+
+		peak = max(peak, total)
 	}
 
 	quit, done := make(chan struct{}), make(chan struct{})
@@ -133,17 +140,26 @@ func runOnce(b *testing.B, sc scenario, subj subject, ckpt int) int64 {
 
 	dir := freshDir(b)
 
+	stopWAL := sampleWAL(dir)
+	defer stopWAL() // a failed iteration still stops the sampler
+
 	var ran atomic.Int64 // handler runs over all queues
 
 	c := subj.open(b, dir, sc, ckpt, &ran)
 
-	stopWAL := sampleWAL(dir)
-	defer stopWAL() // a failed iteration still stops the sampler
+	closed := false
 
-	var failed int64
+	defer func() { // a failed iteration still stops its consumer
+		if !closed {
+			_ = c.close()
+		}
+	}()
 
 	if sc.drain {
-		failed = produce(c, sc)
+		if failed := produce(c, sc); failed > 0 {
+			b.Fatalf("%d adds failed", failed)
+		}
+
 		b.StartTimer()
 
 		if err := c.start(); err != nil {
@@ -155,7 +171,11 @@ func runOnce(b *testing.B, sc scenario, subj subject, ckpt int) int64 {
 		}
 
 		b.StartTimer()
-		failed = produce(c, sc)
+
+		if failed := produce(c, sc); failed > 0 {
+			b.StopTimer()
+			b.Fatalf("%d adds failed", failed)
+		}
 	}
 
 	if err := c.wait(waitDeadline); err != nil {
@@ -169,10 +189,6 @@ func runOnce(b *testing.B, sc scenario, subj subject, ckpt int) int64 {
 		b.Fatalf("%s: handler ran %d times, want %d: a job was lost or run twice", sc.name, n, sc.total)
 	}
 
-	if failed > 0 {
-		b.Fatalf("%d adds failed", failed)
-	}
-
 	if left, err := c.leftover(); err != nil {
 		b.Fatalf("count leftover rows: %v", err)
 	} else if left > 0 {
@@ -181,6 +197,7 @@ func runOnce(b *testing.B, sc scenario, subj subject, ckpt int) int64 {
 
 	// Closing checkpoints and removes the WAL, so the sampling stops first
 	walPeak := stopWAL()
+	closed = true
 
 	if err := c.close(); err != nil {
 		b.Fatalf("close: %v", err)
