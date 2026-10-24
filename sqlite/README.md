@@ -70,14 +70,15 @@ WAL size.
 
 | Scenario | Layout | ckpt1000 | ckpt10000 | walMB 1000 / 10000 |
 |----------|--------|---------:|----------:|-------------------:|
-| `Mixed1Q` | SingleFile | 6,351 | 10,236 | 4.2 / 41.2 |
-| `Drain1Q` | SingleFile | 14,020 | 19,169 | 4.1 / 41.2 |
-| `DrainPrio` | SingleFile | 12,320 | 24,036 | 4.1 / 41.2 |
-| `Mixed10Q` | Folder | 21,058 | 69,482 | 4.1 / 39.8 |
-| `Mixed10Q` | SingleFile | 5,255 | 11,578 | 4.2 / 41.3 |
+| `Mixed1Q` | SingleFile | 6,579 | 9,640 | 4.2 / 41.2 |
+| `Drain1Q` | SingleFile | 12,397 | 17,577 | 4.2 / 41.2 |
+| `DrainPrio` | SingleFile | 11,027 | 16,918 | 4.2 / 41.2 |
+| `Mixed10Q` | SingleFile | 4,290 | 8,678 | 4.2 / 41.3 |
+| `Mixed10Q` | Folder | 22,675 | 34,935 | 4.1 / 39.4 |
 
-A 10,000-page checkpoint runs 1.4 to 3.3x faster than the 1,000-page default
+A 10,000-page checkpoint runs 1.4 to 2.0x faster than the 1,000-page default
 and holds a WAL about ten times larger (41 MB against 4 MB at this payload).
-Ten queues in separate files run 4 to 6x faster than the same ten in one
-file, which fits SQLite allowing one writer per database file. The machine
-and disk change these numbers a lot, so compare runs on the same machine only.
+Ten queues in separate files run 4 to 5x faster than the same ten in one
+file, which fits SQLite allowing one writer per database file. Two runs an hour apart on the same machine differed by up to 2x on the
+ckpt10000 rows, so read the ratios, not the absolute numbers, and compare runs
+on the same machine only.
