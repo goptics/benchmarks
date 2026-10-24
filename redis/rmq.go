@@ -8,11 +8,15 @@ import (
 
 const (
 	rmqQueue = "bench"
-	// rmq has no default for either setting. Both come from rmq v5.2.0's
-	// example/consumer/main.go (prefetchLimit 1000, pollDuration 100ms). The
-	// prefetch is raised to 2*workers when that is larger, because rmq's README
-	// says the prefetch limit should always exceed the consumer count.
-	rmqPollDuration = 100 * time.Millisecond
+	// rmq has no default for either setting. The prefetch comes from rmq
+	// v5.2.0's example/consumer/main.go (prefetchLimit 1000), raised to
+	// 2*workers when that is larger, because rmq's README says the prefetch
+	// limit should always exceed the consumer count. The example's 100 ms
+	// pollDuration is not used: consume sleeps it after every pass, fetched or
+	// empty, which capped one connection near prefetch / 0.1 s (about 10,000
+	// jobs/s; the first run measured 5.9k to 10.3k at C1). At 1 ms the pass's
+	// own round trips set the number.
+	rmqPollDuration = time.Millisecond
 	rmqMinPrefetch  = 1000
 )
 
