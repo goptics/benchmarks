@@ -18,7 +18,7 @@ Pool run of 2026-10-24, Redis and SQLite runs of 2026-10-25, all `-benchtime=2x`
 
 - Pool: VarMQ is the fastest subject in 40, 36 and 20 of the 55 rows at 24, 8 and 4 CPUs. It is slower than the buffered-channel baseline on the one-worker `Loop10` rows, except `1Mu-1t`, where the two are level.
 - Redis: with the `Noop` task, VarMQ is first in 2 of the 6 one-process rows and VarMQDistributed in 2 of the 6 four-process rows, all at 100 producers; rmq leads every single-producer row. Pickup latency p50: taskq 0.03876 ms, VarMQDistributed 0.06492 ms, VarMQ 0.09407 ms, rmq 1.464 ms, Asynq 979.7 ms.
-- SQLite: VarMQ (sqliteq) is first in all 16 rows: on `Mixed1Q` at ckpt1000 it runs 3.1x goqite, 4.8x River and 23x backlite, and ten queues in separate files reach 103,728 jobs/s at ckpt10000.
+- SQLite: VarMQ (sqliteq) is first in all 8 scenario and checkpoint groups: on `Mixed1Q` at ckpt1000 it runs 3.1x goqite, 4.1x River and 23x backlite, and ten queues in separate files reach 107,459 jobs/s at ckpt10000.
 
 ## Environment
 
