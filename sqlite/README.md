@@ -11,33 +11,33 @@ Higher jobs/s is better; lower walMB (the peak total size of the run's WAL files
 
 | Scenario | Subject | ckpt1000 | ckpt10000 | walMB 1000 / 10000 |
 |----------|---------|---------:|----------:|-------------------:|
-| `Mixed1Q` | VarMQ | 6,245 | 13,906 | 4.2 / 41.2 |
-| `Mixed1Q` | Goqite | 2,039 | 3,682 | 4.1 / 41.2 |
-| `Mixed1Q` | Backlite | 266 | 926 | 113.8 / 182.3 |
-| `Mixed1Q` | River | 1,523 | 2,283 | 4.2 / 41.3 |
-| `Drain1Q` | VarMQ | 14,923 | 25,420 | 4.1 / 41.2 |
-| `Drain1Q` | Goqite | 2,834 | 4,229 | 4.2 / 41.2 |
-| `Drain1Q` | Backlite | 1,286 | 1,168 | 126.3 / 166.9 |
-| `Drain1Q` | River | 3,252 | 3,774 | 4.3 / 41.2 |
-| `DrainPrio` | VarMQ | 14,044 | 30,925 | 4.2 / 41.2 |
-| `DrainPrio` | Goqite | 2,862 | 4,052 | 4.1 / 41.2 |
-| `DrainPrio` | River | 3,083 | 3,584 | 4.7 / 41.2 |
-| `Mixed10Q` | VarMQ | 28,971 | 107,459 | 41.3 / 385.4 |
-| `Mixed10Q` | VarMQSingleFile | 4,759 | 10,902 | 4.2 / 41.3 |
-| `Mixed10Q` | Goqite | 2,187 | 5,048 | 4.1 / 41.2 |
-| `Mixed10Q` | Backlite | 4,807 | 5,781 | 352.9 / 369.6 |
-| `Mixed10Q` | River | 1,383 | 2,173 | 4.3 / 41.2 |
+| `Mixed1Q` | VarMQ | 8,575 | 11,860 | 4.2 / 41.2 |
+| `Mixed1Q` | Goqite | 3,032 | 7,091 | 4.1 / 41.2 |
+| `Mixed1Q` | Backlite | 924 | 294 | 197.4 / 204.9 |
+| `Mixed1Q` | River | 1,375 | 2,115 | 4.2 / 41.3 |
+| `Drain1Q` | VarMQ | 14,725 | 21,225 | 4.1 / 41.2 |
+| `Drain1Q` | Goqite | 2,933 | 4,921 | 4.2 / 41.2 |
+| `Drain1Q` | Backlite | 1,119 | 1,016 | 182.2 / 162.4 |
+| `Drain1Q` | River | 3,230 | 3,719 | 4.2 / 41.3 |
+| `DrainPrio` | VarMQ | 12,937 | 25,608 | 4.2 / 41.2 |
+| `DrainPrio` | Goqite | 2,908 | 4,828 | 4.1 / 41.2 |
+| `DrainPrio` | River | 3,240 | 3,625 | 4.5 / 41.4 |
+| `Mixed10Q` | VarMQ | 29,624 | 104,471 | 41.4 / 386.8 |
+| `Mixed10Q` | VarMQSingleFile | 4,553 | 14,110 | 4.2 / 41.3 |
+| `Mixed10Q` | Goqite | 2,131 | 4,668 | 4.1 / 41.2 |
+| `Mixed10Q` | Backlite | 5,326 | 5,419 | 246.5 / 369.4 |
+| `Mixed10Q` | River | 1,431 | 2,175 | 4.4 / 41.2 |
 
 VarMQ is the fastest subject in all 8 scenario and checkpoint groups.
 On `Mixed1Q` the rest follow in the order Goqite, River, Backlite at both checkpoint sizes.
 On `Drain1Q` and `DrainPrio`, River is ahead of Goqite at ckpt1000 and Goqite is ahead of River at ckpt10000; Backlite is last on `Drain1Q` at both.
 On `Mixed10Q` the order after VarMQ is Backlite, VarMQSingleFile, Goqite, River at ckpt1000 and VarMQSingleFile, Backlite, Goqite, River at ckpt10000.
-At ckpt10000, jobs/s is 1.2 to 3.7 times the ckpt1000 figure for Goqite, River, VarMQ and VarMQSingleFile in every scenario.
-For Backlite the ratio is 3.5 on `Mixed1Q` and 1.2 on `Mixed10Q`; on `Drain1Q` its jobs/s falls from 1,286 to 1,168.
-In every row with one database file except Backlite's, walMB is 4.1 to 4.7 MB at ckpt1000 and 41.2 to 41.3 MB at ckpt10000.
-Backlite's WAL peaks at 113.8 to 352.9 MB at ckpt1000 and 166.9 to 369.6 MB at ckpt10000.
-On `Mixed10Q`, ten queues in ten files (VarMQ) reach 6.1 times the jobs/s of the same ten queues in one file (VarMQSingleFile) at ckpt1000 and 9.9 times at ckpt10000.
-The ten WAL files total 41.3 and 385.4 MB, against 4.2 and 41.3 MB for the single file.
+At ckpt10000, jobs/s is 1.1 to 3.5 times the ckpt1000 figure for Goqite, River, VarMQ and VarMQSingleFile in every scenario.
+For Backlite, jobs/s falls from 924 to 294 on `Mixed1Q` and from 1,119 to 1,016 on `Drain1Q`, and rises from 5,326 to 5,419 on `Mixed10Q`.
+In every row with one database file except Backlite's, walMB is 4.1 to 4.5 MB at ckpt1000 and 41.2 to 41.4 MB at ckpt10000.
+Backlite's WAL peaks at 182.2 to 246.5 MB at ckpt1000 and 162.4 to 369.4 MB at ckpt10000.
+On `Mixed10Q`, ten queues in ten files (VarMQ) reach 6.5 times the jobs/s of the same ten queues in one file (VarMQSingleFile) at ckpt1000 and 7.4 times at ckpt10000.
+The ten WAL files total 41.4 and 386.8 MB, against 4.2 and 41.3 MB for the single file.
 Absolute numbers vary between runs on the same machine; compare ratios within one run.
 
 ## Subjects
@@ -68,13 +68,15 @@ River's logger is discarded.
 
 - Mixed: the consumers start before the timer, which runs from the first add to the last job acknowledged, producing and consuming at once.
 - Drain: every job is added first, then the timer runs from consumer start to the last job acknowledged, so each subject's start-up is timed (backlite `Start`, goqite's runner goroutines, River `client.Start`, varmq `Worker.Start`).
-- Every job is an `int`; the handler only increments a shared counter.
-- Priority (`DrainPrio`): Goqite, River and VarMQ run it, and each maps `i % 4 == 0` to its highest priority: goqite takes higher numbers first (`3 - i % 4`), River takes 1 as highest (`i % 4 + 1`), varmq takes lower numbers first (`i % 4`). The order in which jobs are served is not checked.
+- Every job is an `int` id `i`, unique across all queues: queue x per-queue + producer x per-producer + j, with queue, producer and that producer's add j all counted from 0.
+- Every subject's handler only records `i` in a shared tally, one counter per job.
+- Priority (`DrainPrio`): Goqite, River and VarMQ run it, and each computes a job's priority from its id, mapping `i % 4 == 0` to its highest priority: goqite takes higher numbers first (`3 - i % 4`), River takes 1 as highest (`i % 4 + 1`), varmq takes lower numbers first (`i % 4`). The order in which jobs are served is not checked.
 - Rows are named `BenchmarkSQLite/<scenario>/ckpt<n>/<subject>`; `ckpt<n>` is the WAL checkpoint size in pages, 1000 (SQLite's default) or 10000, set on every connection.
 - jobs/s = jobs x iterations / timed seconds.
 - walMB = the largest total size of all `-wal` files in the run's directory, sampled every 50 ms from before the store opens until just before it closes, the maximum over the row's iterations. SQLite does not shrink a WAL file after a checkpoint, so this is the files' high-water size.
-- A row fails on an open or schema error, a failed add, a start error, the jobs not all acknowledged within 5 minutes, a handler count different from the job count, rows left in the queue tables (River counts jobs not in state `completed`, since it keeps completed rows), or a close error.
-- The handler count is checked as a total, so one lost job plus one duplicate would pass.
+- A row fails on an open or schema error, a failed add, a start error, the jobs not all acknowledged within 5 minutes, rows left in the queue tables (River counts jobs not in state `completed`, since it keeps completed rows), or a close error.
+- A row also fails if any job is delivered twice, an id the run never added arrives, or any job is never handled.
+- The tally is checked after the last job and again after close, so a redelivery while stopping counts too.
 
 ## Running
 
