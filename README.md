@@ -1,51 +1,50 @@
-# VarMQ Benchmarks
+# Benchmarks
 
 [![Live charts](https://img.shields.io/badge/%F0%9F%93%8A-Live_Charts-blue?style=for-the-badge)](https://benchmarks.goptics.org)
 
-Benchmark suites for [VarMQ](https://github.com/goptics/varmq) against other Go worker pools and message queues. Raw `go test -bench` output is committed under `<suite>/bench/`; the charts at <https://benchmarks.goptics.org> are built from those files.
+Benchmarks of Go worker pools and job queues: in-process worker pools, Redis-backed queues and SQLite-backed queues. Raw `go test -bench` output is committed under `<suite>/bench/`, and the charts at <https://benchmarks.goptics.org> are built from it.
 
 ## Suites
 
-| Suite | Compares | Charts | Details |
-|-------|----------|--------|---------|
-| Worker pool | VarMQ vs Pond, Ants, WorkerPool, Conc, ErrGroup, Gopool and two channel baselines | [24](https://benchmarks.goptics.org/?id=pool-24cpu), [8](https://benchmarks.goptics.org/?id=pool-8cpu), [4 CPUs](https://benchmarks.goptics.org/?id=pool-4cpu) | [pool/README.md](pool/README.md) |
-| Message queue, Redis | VarMQ (redisq) vs Asynq, rmq, taskq, gocraft/work, with one and four consumer processes | [redis](https://benchmarks.goptics.org/?id=redis) | [redis/README.md](redis/README.md) |
-| Message queue, SQLite | VarMQ (sqliteq) vs goqite, backlite, River, at WAL checkpoint 1000 and 10000 pages | [sqlite](https://benchmarks.goptics.org/?id=sqlite) | [sqlite/README.md](sqlite/README.md) |
-
-## Results
-
-Pool run of 2026-10-24, Redis and SQLite runs of 2026-10-25, all `-benchtime=2x`. Full tables in the suite READMEs.
-
-- Pool: VarMQ is the fastest subject in 40, 36 and 20 of the 55 rows at 24, 8 and 4 CPUs. It is slower than the buffered-channel baseline on the one-worker `Loop10` rows, except `1Mu-1t`, where the two are level.
-- Redis: with the `Noop` task, VarMQ is first in 2 of the 6 one-process rows and VarMQDistributed in 2 of the 6 four-process rows, all at 100 producers; rmq leads every single-producer row. Pickup latency p50: taskq 0.03876 ms, VarMQDistributed 0.06492 ms, VarMQ 0.09407 ms, rmq 1.464 ms, Asynq 979.7 ms.
-- SQLite: VarMQ (sqliteq) is first in all 8 scenario and checkpoint groups: on `Mixed1Q` at ckpt1000 it runs 3.1x goqite, 4.1x River and 23x backlite, and ten queues in separate files reach 107,459 jobs/s at ckpt10000.
+| Suite | What runs | Libraries | Charts | Details |
+|-------|-----------|-----------|--------|---------|
+| Worker pool | 9 subjects (7 libraries plus two channel baselines); 5 workload shapes, 4 tasks, 4 pool sizes, 1M tasks per op; recorded at GOMAXPROCS 24, 8 and 4 | [ants](https://github.com/panjf2000/ants), [conc](https://github.com/sourcegraph/conc), errgroup ([x/sync](https://github.com/golang/sync)), gopool ([bytedance/gopkg](https://github.com/bytedance/gopkg)), [pond](https://github.com/alitto/pond), [VarMQ](https://github.com/goptics/varmq), [workerpool](https://github.com/gammazero/workerpool) | [pool-24cpu](https://benchmarks.goptics.org/?id=pool-24cpu), [pool-8cpu](https://benchmarks.goptics.org/?id=pool-8cpu), [pool-4cpu](https://benchmarks.goptics.org/?id=pool-4cpu) | [pool/README.md](pool/README.md) |
+| Message queue, Redis | 6 subjects from 5 libraries; 100,000 jobs per op through 1 or 4 library instances in one process, plus enqueue-only and enqueue-to-handler latency | [Asynq](https://github.com/hibiken/asynq), [gocraft/work](https://github.com/gocraft/work), [rmq](https://github.com/adjust/rmq), [taskq](https://github.com/vmihailenco/taskq), [VarMQ](https://github.com/goptics/varmq) with [redisq](https://github.com/goptics/redisq) | [redis](https://benchmarks.goptics.org/?id=redis) | [redis/README.md](redis/README.md) |
+| Message queue, SQLite | 5 subjects from 4 libraries; 4 scenarios at WAL checkpoint 1000 and 10000 pages | [backlite](https://github.com/mikestefanello/backlite), [goqite](https://github.com/maragudk/goqite), [River](https://github.com/riverqueue/river), [VarMQ](https://github.com/goptics/varmq) with [sqliteq](https://github.com/goptics/sqliteq) | [sqlite](https://benchmarks.goptics.org/?id=sqlite) | [sqlite/README.md](sqlite/README.md) |
 
 ## Environment
 
-Intel Core i7-13700 (24 threads), linux/amd64, Go 1.26.2. Pool suite at GOMAXPROCS 24, 8 and 4. Redis 7.2 (Debian image) pinned to CPU 14, client on cores 0-13 and 16-23. SQLite databases on ext4 over NVMe.
+Intel Core i7-13700 (24 threads), linux/amd64, Go 1.26, SQLite databases on ext4 over NVMe.
 
-| Library | Version |
-|---------|---------|
-| varmq | 415ad73 (unreleased, `replace` in each go.mod) |
-| redisq | v1.5.0 |
-| sqliteq | v0.3.0 |
-| pond | v2.7.2 |
-| ants | v2.12.1 |
-| workerpool | v1.2.2 |
-| conc | v0.3.0 |
-| x/sync (errgroup) | v0.24.0 |
-| bytedance/gopkg (gopool) | v0.1.4 |
-| asynq | v0.26.0 |
-| rmq | v5.2.0 |
-| taskq | v3.2.9 |
-| gocraft/work | v0.5.1 |
-| goqite | v0.4.0 |
-| backlite | v0.8.0 |
-| river | v0.49.0 |
+The pool suite sets GOMAXPROCS to 24, 8 and 4 with no core pinning. The SQLite suite runs on all 24 threads. Redis 7.2 (Debian image) is pinned to CPU 14 and the Redis suite's client to CPUs 0-13 and 16-23 (22 threads), so Redis has a whole physical core.
+
+| Library | Version | Suite |
+|---------|---------|-------|
+| [varmq](https://github.com/goptics/varmq) | v1.10.0 | pool, redis, sqlite |
+| [ants](https://github.com/panjf2000/ants) | v2.12.1 | pool |
+| [workerpool](https://github.com/gammazero/workerpool) | v1.2.2 | pool |
+| [conc](https://github.com/sourcegraph/conc) | v0.3.0 | pool |
+| [x/sync](https://github.com/golang/sync) (errgroup) | v0.24.0 | pool |
+| [bytedance/gopkg](https://github.com/bytedance/gopkg) (gopool) | v0.1.4 | pool |
+| [pond](https://github.com/alitto/pond) | v2.7.2 | pool |
+| [redisq](https://github.com/goptics/redisq) | v1.5.0 | redis |
+| [Asynq](https://github.com/hibiken/asynq) | v0.26.0 | redis |
+| [rmq](https://github.com/adjust/rmq) | v5.2.0 | redis |
+| [taskq](https://github.com/vmihailenco/taskq) | v3.2.9 | redis |
+| [gocraft/work](https://github.com/gocraft/work) | v0.5.1 | redis |
+| [go-redis](https://github.com/redis/go-redis) | v9.23.0 (taskq uses v8.11.5) | redis |
+| [redigo](https://github.com/gomodule/redigo) | v1.9.3 | redis |
+| [sqliteq](https://github.com/goptics/sqliteq) | v0.3.0 | sqlite |
+| [goqite](https://github.com/maragudk/goqite) | v0.4.0 | sqlite |
+| [backlite](https://github.com/mikestefanello/backlite) | v0.8.0 | sqlite |
+| [River](https://github.com/riverqueue/river) with its [SQLite driver](https://github.com/riverqueue/river/tree/master/riverdriver/riversqlite) | v0.49.0 | sqlite |
+| [go-sqlite3](https://github.com/mattn/go-sqlite3) | v1.14.28 | sqlite |
 
 ## Running
 
-Needs Go 1.26+ and [Task](https://taskfile.dev); Docker for the Redis suite; a C compiler for the SQLite suite; [vizb](https://github.com/goptics/vizb) and `jq` for `task site:preview`.
+Needs Go 1.26+, [Task](https://taskfile.dev), Docker for the Redis suite, a C compiler for the SQLite suite, and [vizb](https://github.com/goptics/vizb) and `jq` for `task site:preview`.
+
+varmq v1.10.0 is not tagged yet; each go.mod builds it from a checkout of [goptics/varmq](https://github.com/goptics/varmq) at `../../varmq` through a `replace` directive.
 
 ```bash
 task --list                          # every task
