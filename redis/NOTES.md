@@ -15,7 +15,7 @@ Per-library notes read from the library sources at the versions in go.mod; the t
 
 ### VarMQ (persistent)
 
-Library versions `varmq 415ad73` (unreleased, `replace` directive) and
+Library versions `varmq v1.10.0` and
 `redisq v1.5.0`.
 
 - Dequeue: `bind` (`varmq/source.go`) sees that `*redisq.Queue` implements
@@ -207,7 +207,7 @@ Library version `asynq v0.26.0`. Paths are inside the module (`go env GOMODCACHE
 
 ### VarMQDistributed
 
-Library versions `varmq 415ad73` (unreleased, `replace` directive) and
+Library versions `varmq v1.10.0` and
 `redisq v1.5.0`.
 
 - Dequeue and ack: the same credit path as VarMQ (persistent).
