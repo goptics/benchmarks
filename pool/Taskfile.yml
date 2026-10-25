@@ -8,7 +8,7 @@ tasks:
   bench:
     desc: Every benchmark once
     cmds:
-      - go test -run xxx -bench . -benchtime=1x -benchmem
+      - go test -run xxx -bench . -benchtime=1x -benchmem -timeout 0
   txt:
     desc: Full matrix at 24, 8 and 4 CPUs into bench/ (hours)
     cmds:
