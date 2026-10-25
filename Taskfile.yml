@@ -9,7 +9,7 @@ vars:
   PUBLIC: worker/public
   DATA: worker/public/data
   DATA_URL: https://benchmarks.goptics.org/dataset
-  BAR: vizb bar -p /n/y/x -T s -M MB --round -l --border-radius 8,8,0,0
+  BAR: vizb bar -p /n/y/x -T s -M MB --round --horizontal -s best --border-radius 8,8,0,0
   # Subjects shown in the C1, Enqueue and Latency groups; VarMQDistributed only
   # appears in the C4 groups. Keep in step with redis/subjects.go.
   SUBJECTS: '(VarMQ|Asynq|Rmq|Taskq|GocraftWork)'
