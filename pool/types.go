@@ -44,13 +44,22 @@ type TaskConfig struct {
 	LoopSize int    // Number of iterations for the loop
 }
 
+// sink receives a loop result that is never -1, so the compiler has to run
+// the loop's arithmetic instead of deleting it as dead code.
+var sink int
+
 // GenerateTask creates a task function based on the configuration
 func (tc TaskConfig) GenerateTask() func() {
 	return func() {
 		// Execute the loop if configured
 		if tc.LoopSize > 0 {
+			sum := 0
 			for i := range tc.LoopSize {
-				_ = i * i
+				sum += i * i
+			}
+
+			if sum == -1 { // never true: keeps sum, and so the loop, alive
+				sink = sum
 			}
 		}
 

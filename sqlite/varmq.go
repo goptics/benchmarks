@@ -4,7 +4,6 @@ import (
 	"database/sql"
 	"fmt"
 	"path/filepath"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -46,7 +45,7 @@ type bound struct {
 	add    func(i int) bool // enqueues job number i
 }
 
-func bind(tb testing.TB, qs sqliteq.Queues, sc scenario, name string, ran *atomic.Int64) bound {
+func bind(tb testing.TB, qs sqliteq.Queues, sc scenario, name string, ran *tally) bound {
 	tb.Helper()
 
 	configs := []any{varmq.WithConcurrency(16)}
@@ -54,7 +53,7 @@ func bind(tb testing.TB, qs sqliteq.Queues, sc scenario, name string, ran *atomi
 		configs = append(configs, varmq.WithAutoRun(false)) // start() runs it after the fill
 	}
 
-	w := varmq.NewWorker(func(varmq.Job[int]) { ran.Add(1) }, configs...)
+	w := varmq.NewWorker(func(j varmq.Job[int]) { ran.handle(j.Data()) }, configs...)
 
 	if sc.priority {
 		q, err := qs.NewPriorityQueue(name)
@@ -85,8 +84,8 @@ type varmqConsumer struct {
 	drain  bool
 }
 
-func openVarMQ(l layout) func(testing.TB, string, scenario, int, *atomic.Int64) consumer {
-	return func(tb testing.TB, dir string, sc scenario, ckpt int, ran *atomic.Int64) consumer {
+func openVarMQ(l layout) func(testing.TB, string, scenario, int, *tally) consumer {
+	return func(tb testing.TB, dir string, sc scenario, ckpt int, ran *tally) consumer {
 		tb.Helper()
 
 		path := dir

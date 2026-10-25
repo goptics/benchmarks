@@ -115,12 +115,15 @@ func quiesce(stop func(), done <-chan struct{}) {
 }
 
 // runEndToEnd starts sh.instances consumers, enqueues the workload and waits
-// until every job has been handled. It returns the duplicate-delivery count.
-// tb is only touched from the calling goroutine.
+// until every job has been handled. It returns the duplicate-delivery count,
+// read after every consumer has stopped, so a redelivery during shutdown is
+// counted too. tb is only touched from the calling goroutine.
 func runEndToEnd(tb testing.TB, s durableSubject, url string, w workload, sh shape, t task) (dups int64) {
 	tb.Helper()
 
 	c := newCollector(w.total(), t)
+
+	defer func() { dups = c.dups() }() // registered first, so it runs after every stop
 
 	var enqueue enqueueFunc
 
@@ -149,11 +152,11 @@ func runEndToEnd(tb testing.TB, s durableSubject, url string, w workload, sh sha
 		tb.Fatalf("%s: enqueue: %v", s.name, err)
 	case <-time.After(5 * time.Minute):
 		if err := c.wait(0); err != nil {
-			tb.Fatalf("%s: %v", s.name, err)
+			tb.Fatalf("%s: not done 5m after the first enqueue: %v", s.name, err)
 		}
 	}
 
-	return c.dups()
+	return 0 // replaced by the deferred read above
 }
 
 // runEnqueue measures producing only: nothing consumes the jobs.
@@ -186,12 +189,23 @@ func runLatency(tb testing.TB, s durableSubject, url string, n int) []int64 {
 	tb.Helper()
 
 	// Buffered so a late or duplicate delivery never blocks a worker (and
-	// with it, stop).
+	// with it, stop). A delivery of any job other than the one just enqueued
+	// is not a sample: it is counted, and the run fails.
+	var want, stray atomic.Int64
+
+	want.Store(-1)
+
 	got := make(chan int64, 1)
 	h := func(p payload) {
+		if p.ID != want.Load() {
+			stray.Add(1)
+			return
+		}
+
 		select {
 		case got <- time.Now().UnixNano() - p.EnqueuedAt:
 		default:
+			stray.Add(1)
 		}
 	}
 
@@ -208,6 +222,8 @@ func runLatency(tb testing.TB, s durableSubject, url string, n int) []int64 {
 	out := make([]int64, 0, n)
 
 	for i := range n {
+		want.Store(int64(i))
+
 		if err := enqueue(newPayload(int64(i))); err != nil {
 			tb.Fatalf("%s: enqueue %d: %v", s.name, i, err)
 		}
@@ -218,6 +234,10 @@ func runLatency(tb testing.TB, s durableSubject, url string, n int) []int64 {
 		case <-time.After(10 * time.Second):
 			tb.Fatalf("%s: job %d not handled within 10s", s.name, i)
 		}
+	}
+
+	if n := stray.Load(); n > 0 {
+		tb.Fatalf("%s: %d deliveries of a job other than the one just enqueued (duplicates)", s.name, n)
 	}
 
 	slices.Sort(out)

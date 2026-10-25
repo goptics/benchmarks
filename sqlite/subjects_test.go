@@ -1,7 +1,6 @@
 package sqlite
 
 import (
-	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -24,9 +23,9 @@ func TestSubjects(t *testing.T) {
 			}
 
 			t.Run(subj.name+"/"+sc.name, func(t *testing.T) {
-				var ran atomic.Int64
+				ran := newTally(sc.total)
 
-				c := subj.open(t, t.TempDir(), sc, 1000, &ran)
+				c := subj.open(t, t.TempDir(), sc, 1000, ran)
 
 				var failed int64
 
@@ -48,8 +47,8 @@ func TestSubjects(t *testing.T) {
 					t.Fatal(err)
 				}
 
-				if n := ran.Load(); n != int64(sc.total) {
-					t.Fatalf("handler ran %d times, want %d", n, sc.total)
+				if err := ran.check(); err != nil {
+					t.Fatal(err)
 				}
 
 				if failed > 0 {

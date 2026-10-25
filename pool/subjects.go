@@ -10,6 +10,7 @@ import (
 	"github.com/panjf2000/ants/v2"
 	"github.com/sourcegraph/conc/pool"
 	"golang.org/x/sync/errgroup"
+	"time"
 )
 
 // Configuration
@@ -92,8 +93,14 @@ var subjects = []subject{
 			}
 
 			return func(t func()) {
-				_ = p.Submit(t)
-			}, p.Release
+					_ = p.Submit(t)
+				}, func() {
+					// Release alone returns before the workers exit; every other
+					// subject's teardown waits for its workers, so this one does too.
+					if err := p.ReleaseTimeout(time.Minute); err != nil {
+						panic(err)
+					}
+				}
 		},
 	},
 	{
