@@ -79,7 +79,11 @@ var subjects = []subject{
 			return func(task func()) {
 					q.Add(task)
 				}, func() {
+					// WaitAndStop returns once no job is left, before the workers
+					// exit; waiting for the stopped state matches the subjects
+					// whose teardown joins their workers.
 					w.WaitAndStop()
+					w.WaitUntilStopped()
 				}
 		},
 	},
