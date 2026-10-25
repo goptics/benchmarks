@@ -4,7 +4,6 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 )
@@ -143,9 +142,9 @@ func runOnce(b *testing.B, sc scenario, subj subject, ckpt int) int64 {
 	stopWAL := sampleWAL(dir)
 	defer stopWAL() // a failed iteration still stops the sampler
 
-	var ran atomic.Int64 // handler runs over all queues
+	ran := newTally(sc.total)
 
-	c := subj.open(b, dir, sc, ckpt, &ran)
+	c := subj.open(b, dir, sc, ckpt, ran)
 
 	closed := false
 
@@ -185,8 +184,8 @@ func runOnce(b *testing.B, sc scenario, subj subject, ckpt int) int64 {
 
 	b.StopTimer()
 
-	if n := ran.Load(); n != int64(sc.total) {
-		b.Fatalf("%s: handler ran %d times, want %d: a job was lost or run twice", sc.name, n, sc.total)
+	if err := ran.check(); err != nil {
+		b.Fatalf("%s: %v", sc.name, err)
 	}
 
 	if left, err := c.leftover(); err != nil {
@@ -201,6 +200,10 @@ func runOnce(b *testing.B, sc scenario, subj subject, ckpt int) int64 {
 
 	if err := c.close(); err != nil {
 		b.Fatalf("close: %v", err)
+	}
+
+	if err := ran.check(); err != nil { // a redelivery while stopping
+		b.Fatalf("%s: after close: %v", sc.name, err)
 	}
 
 	return walPeak

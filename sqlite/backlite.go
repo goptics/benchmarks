@@ -5,7 +5,6 @@ import (
 	"database/sql"
 	"errors"
 	"path/filepath"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -52,9 +51,9 @@ func (backliteTask[Q]) Config() backlite.QueueConfig {
 
 // backliteQueue builds the queue for one task type and the function that
 // makes its tasks.
-func backliteQueue[Q qname](ran *atomic.Int64) (backlite.Queue, func(int) backlite.Task) {
-	q := backlite.NewQueue[backliteTask[Q]](func(context.Context, backliteTask[Q]) error {
-		ran.Add(1)
+func backliteQueue[Q qname](ran *tally) (backlite.Queue, func(int) backlite.Task) {
+	q := backlite.NewQueue[backliteTask[Q]](func(_ context.Context, t backliteTask[Q]) error {
+		ran.handle(t.N)
 
 		return nil
 	})
@@ -63,7 +62,7 @@ func backliteQueue[Q qname](ran *atomic.Int64) (backlite.Queue, func(int) backli
 }
 
 // ponytail: ten task types for the ten-queue scenario; add a type to go wider.
-var backliteQueues = []func(*atomic.Int64) (backlite.Queue, func(int) backlite.Task){
+var backliteQueues = []func(*tally) (backlite.Queue, func(int) backlite.Task){
 	backliteQueue[q0], backliteQueue[q1], backliteQueue[q2], backliteQueue[q3], backliteQueue[q4],
 	backliteQueue[q5], backliteQueue[q6], backliteQueue[q7], backliteQueue[q8], backliteQueue[q9],
 }
@@ -72,14 +71,14 @@ type backliteConsumer struct {
 	db      *sql.DB
 	client  *backlite.Client
 	tasks   []func(int) backlite.Task
-	ran     *atomic.Int64
+	ran     *tally
 	total   int
 	started bool
 }
 
 // openBacklite makes one backlite client with 16 workers per scenario queue
 // and one registered queue per scenario queue, all in one database file.
-func openBacklite(tb testing.TB, dir string, sc scenario, ckpt int, ran *atomic.Int64) consumer {
+func openBacklite(tb testing.TB, dir string, sc scenario, ckpt int, ran *tally) consumer {
 	tb.Helper()
 
 	if sc.queues > len(backliteQueues) {

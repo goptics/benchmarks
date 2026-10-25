@@ -7,7 +7,6 @@ import (
 	"fmt"
 	"log/slog"
 	"path/filepath"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -24,11 +23,11 @@ func (riverArgs) Kind() string { return "bench" }
 
 type riverWorker struct {
 	river.WorkerDefaults[riverArgs]
-	ran *atomic.Int64
+	ran *tally
 }
 
-func (w *riverWorker) Work(context.Context, *river.Job[riverArgs]) error {
-	w.ran.Add(1)
+func (w *riverWorker) Work(_ context.Context, j *river.Job[riverArgs]) error {
+	w.ran.handle(j.Args.N)
 
 	return nil
 }
@@ -37,14 +36,14 @@ type riverConsumer struct {
 	db      *sql.DB
 	client  *river.Client[*sql.Tx]
 	prio    bool
-	ran     *atomic.Int64
+	ran     *tally
 	total   int
 	started bool
 }
 
 // openRiver migrates a fresh database and makes one River client with a
 // 16-worker queue per scenario queue.
-func openRiver(tb testing.TB, dir string, sc scenario, ckpt int, ran *atomic.Int64) consumer {
+func openRiver(tb testing.TB, dir string, sc scenario, ckpt int, ran *tally) consumer {
 	tb.Helper()
 
 	db := openDB(tb, filepath.Join(dir, "bench.db"), ckpt)

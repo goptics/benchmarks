@@ -7,7 +7,6 @@ import (
 	"path/filepath"
 	"strconv"
 	"sync"
-	"sync/atomic"
 	"testing"
 	"time"
 
@@ -41,7 +40,7 @@ type goqiteConsumer struct {
 	queues  []*goqite.Queue
 	runners []*jobs.Runner
 	prio    bool
-	ran     *atomic.Int64
+	ran     *tally
 	total   int
 	cancel  context.CancelFunc
 	stopped sync.WaitGroup
@@ -49,7 +48,7 @@ type goqiteConsumer struct {
 
 // openGoqite makes one goqite queue and one job runner (16 jobs at a time,
 // the default 100 ms poll) per scenario queue, all in one database file.
-func openGoqite(tb testing.TB, dir string, sc scenario, ckpt int, ran *atomic.Int64) consumer {
+func openGoqite(tb testing.TB, dir string, sc scenario, ckpt int, ran *tally) consumer {
 	tb.Helper()
 
 	db := openDB(tb, filepath.Join(dir, "bench.db"), ckpt)
@@ -66,8 +65,13 @@ func openGoqite(tb testing.TB, dir string, sc scenario, ckpt int, ran *atomic.In
 	for i := range sc.queues {
 		q := goqite.New(goqite.NewOpts{DB: db, Name: fmt.Sprintf("q%d", i)})
 		r := jobs.NewRunner(jobs.NewRunnerOpts{Limit: 16, Queue: q})
-		r.Register("bench", func(context.Context, []byte) error {
-			ran.Add(1)
+		r.Register("bench", func(_ context.Context, body []byte) error {
+			id, err := strconv.Atoi(string(body))
+			if err != nil {
+				id = -1 // counted as an unknown delivery
+			}
+
+			ran.handle(id)
 
 			return nil
 		})

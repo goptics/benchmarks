@@ -26,7 +26,9 @@ func BenchmarkDurable(b *testing.B) {
 									flush(b, url)
 									b.StartTimer()
 
-									runEndToEnd(b, s, url, w, sh, t)
+									if dups := runEndToEnd(b, s, url, w, sh, t); dups > 0 {
+										b.Fatalf("%s: %d duplicate deliveries", s.name, dups)
+									}
 								}
 
 								reportJobsPerSec(b, w)
