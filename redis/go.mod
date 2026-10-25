@@ -8,7 +8,7 @@ require (
 	github.com/gocraft/work v0.5.1
 	github.com/gomodule/redigo v1.9.3
 	github.com/goptics/redisq v1.5.0
-	github.com/goptics/varmq v1.9.0
+	github.com/goptics/varmq v1.10.0
 	github.com/hibiken/asynq v0.26.0
 	github.com/redis/go-redis/v9 v9.23.0
 	github.com/vmihailenco/taskq/v3 v3.2.9

@@ -10,8 +10,8 @@ vars:
   DATA: worker/public/data
   DATA_URL: https://benchmarks.goptics.org/dataset
   BAR: vizb bar -p /n/y/x -T s -M MB --round -l --border-radius 8,8,0,0
-  # C1, Enqueue and Latency groups race VarMQ's persistent queue against these;
-  # VarMQDistributed only appears in the C4 groups. Keep in step with redis/subjects.go.
+  # Subjects shown in the C1, Enqueue and Latency groups; VarMQDistributed only
+  # appears in the C4 groups. Keep in step with redis/subjects.go.
   SUBJECTS: '(VarMQ|Asynq|Rmq|Taskq|GocraftWork)'
   # catalog order = dashboard order; listed literally (a glob sorts 4cpu before 24cpu)
   JSONS: >-
@@ -32,13 +32,13 @@ tasks:
       - '{{.BAR}} --stack pool/bench/pool-4cpu.txt  -n "Worker Pool (4 CPUs)"  --id pool-4cpu  -d "Same matrix at GOMAXPROCS 4" -o {{.DATA}}/pool-4cpu.json'
       - >-
         {{.BAR}} --stack redis/bench/redis.txt -n "Message Queue Redis" --id redis
-        -d "VarMQ (redisq) vs Asynq, rmq, taskq, gocraft/work on Redis 7.2. C1 groups: one consumer process; C4: four. Plus enqueue-only and pickup latency"
+        -d "Asynq, gocraft/work, rmq, taskq and VarMQ (redisq) on Redis 7.2. C1 groups: one library instance; C4: four instances in the same process. Plus enqueue-only and enqueue-to-handler latency"
         -f '^(Benchmark)?((Durable/[^/]+C1|Enqueue/Enqueue|Latency/[^/]+)/[^/]+/{{.SUBJECTS}}$|Durable/[^/]+C4/)'
         --better p50-ms:low,p99-ms:low,max-ms:low
         -o {{.DATA}}/redis.json
       - >-
         {{.BAR}} --stack sqlite/bench/sqlite.txt -n "Message Queue SQLite" --id sqlite
-        -d "VarMQ (sqliteq) vs goqite, backlite, River on SQLite: one queue, drain, priority, ten queues; WAL checkpoint 1000 vs 10000 pages"
+        -d "backlite, goqite, River and VarMQ (sqliteq) on SQLite: one queue, drain, priority, ten queues; WAL checkpoint 1000 vs 10000 pages"
         --better walMB:low -o {{.DATA}}/sqlite.json
       - jq -se 'all(.data | length > 0)' {{.JSONS}}
       - jq -s 'map({id, name})' {{.JSONS}} > {{.DATA}}/_catalog.json

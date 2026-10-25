@@ -4,7 +4,7 @@ go 1.26.0
 
 require (
 	github.com/goptics/sqliteq v0.3.0
-	github.com/goptics/varmq v1.9.0
+	github.com/goptics/varmq v1.10.0
 	github.com/mattn/go-sqlite3 v1.14.28
 	github.com/mikestefanello/backlite v0.8.0
 	github.com/riverqueue/river v0.49.0
