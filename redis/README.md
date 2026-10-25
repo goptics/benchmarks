@@ -14,7 +14,7 @@ Chart: https://benchmarks.goptics.org/?id=redis
 - `VarMQ` runs `C1` only, because its persistent queue is single-instance. `Asynq`, `GocraftWork`, `Rmq`, `Taskq` and `VarMQDistributed` run `C1` and `C4`. On the chart the `C1`, Enqueue and Latency groups leave `VarMQDistributed` out; its rows for them are in `bench/redis.txt`.
 - `BenchmarkEnqueue` runs the producer only, with no consumers, on the same two workloads and payload. It is timed from building the producer to its close.
 - `BenchmarkLatency` measures enqueue-to-handler latency: 1,000 jobs, one at a time, on one instance with 10 workers. Job i+1 is enqueued only after job i reached the handler, with a 10 s limit per job. Each sample is the time from just before the enqueue call to handler entry, so it includes the enqueue round trip. p50, p99 and max are over all samples of the row's iterations: 2,000 samples at `-benchtime=2x`.
-- A `Durable` row fails if the 100,000 unique jobs are not all handled within 5 minutes or an enqueue fails. Duplicate deliveries are counted but do not fail a row; `TestSubjects` (`task redis:test`) fails on them.
+- A `Durable` row fails if the 100,000 unique jobs are not all handled within 5 minutes, an enqueue fails, or any job is delivered more than once. Duplicates are counted after every consumer instance has stopped, so a redelivery during shutdown counts too. A `Latency` row fails on any delivery of a job other than the one just enqueued. `TestSubjects` (`task redis:test`) runs the same checks.
 - `jobs/s` = jobs x iterations / timed seconds.
 
 ## Results
@@ -25,12 +25,12 @@ Run of 2026-10-25: varmq v1.10.0, redisq v1.5.0, `-benchtime=2x`, Redis 7.2 pinn
 
 | Row | VarMQ | Asynq | Rmq | Taskq | GocraftWork |
 |---|---:|---:|---:|---:|---:|
-| NoopW10C1 / 1u-100Kt | 21,108 | 15,390 | 33,195 | 18,853 | 24,935 |
-| NoopW10C1 / 100u-1Kt | 41,970 | 17,604 | 28,880 | 34,628 | 49,213 |
-| NoopW100C1 / 1u-100Kt | 20,665 | 17,048 | 33,439 | 18,352 | 24,990 |
-| NoopW100C1 / 100u-1Kt | 60,025 | 19,439 | 29,022 | 34,578 | 44,659 |
-| NoopW1000C1 / 1u-100Kt | 19,710 | 16,467 | 32,678 | 16,674 | 24,408 |
-| NoopW1000C1 / 100u-1Kt | 58,523 | 17,932 | 27,349 | 28,638 | 40,679 |
+| NoopW10C1 / 1u-100Kt | 21,968 | 15,806 | 35,129 | 19,031 | 25,428 |
+| NoopW10C1 / 100u-1Kt | 41,816 | 17,823 | 29,616 | 34,434 | 48,917 |
+| NoopW100C1 / 1u-100Kt | 20,812 | 15,096 | 35,708 | 18,448 | 25,731 |
+| NoopW100C1 / 100u-1Kt | 59,898 | 17,744 | 28,521 | 34,499 | 44,775 |
+| NoopW1000C1 / 1u-100Kt | 21,157 | 17,710 | 34,621 | 16,351 | 25,147 |
+| NoopW1000C1 / 100u-1Kt | 58,308 | 18,954 | 30,010 | 27,197 | 40,255 |
 
 Rmq leads every single-producer row; at 100 producers GocraftWork leads at W10 and VarMQ at W100 and W1000.
 
@@ -38,32 +38,32 @@ Rmq leads every single-producer row; at 100 producers GocraftWork leads at W10 a
 
 | Row | Asynq | VarMQDistributed | Rmq | Taskq | GocraftWork |
 |---|---:|---:|---:|---:|---:|
-| NoopW10C4 / 1u-100Kt | 11,896 | 22,057 | 29,616 | 10,904 | 24,339 |
-| NoopW10C4 / 100u-1Kt | 20,889 | 53,754 | 59,649 | 17,323 | 48,722 |
-| NoopW100C4 / 1u-100Kt | 13,350 | 22,263 | 29,953 | 10,576 | 23,683 |
-| NoopW100C4 / 100u-1Kt | 22,677 | 63,710 | 58,620 | 16,077 | 41,730 |
-| NoopW1000C4 / 1u-100Kt | 12,747 | 22,231 | 27,784 | 8,267 | 21,068 |
-| NoopW1000C4 / 100u-1Kt | 19,119 | 64,281 | 52,549 | 11,100 | 36,809 |
+| NoopW10C4 / 1u-100Kt | 12,961 | 22,270 | 31,231 | 11,085 | 25,078 |
+| NoopW10C4 / 100u-1Kt | 17,397 | 54,371 | 60,003 | 18,989 | 47,484 |
+| NoopW100C4 / 1u-100Kt | 13,246 | 22,371 | 30,557 | 10,603 | 25,473 |
+| NoopW100C4 / 100u-1Kt | 17,670 | 64,352 | 59,094 | 15,898 | 42,707 |
+| NoopW1000C4 / 1u-100Kt | 12,553 | 22,215 | 27,712 | 7,868 | 23,676 |
+| NoopW1000C4 / 100u-1Kt | 19,361 | 64,171 | 50,903 | 11,103 | 36,269 |
 
 Rmq leads every single-producer row; at 100 producers Rmq leads at W10 and VarMQDistributed at W100 and W1000.
 
 `Sleep1ms` rows are capped at C x W x 1,000 jobs/s and are on the chart and in `bench/redis.txt`.
 
-Enqueue only (`BenchmarkEnqueue`, jobs/s, highest first): at one producer VarMQ 37,292, Rmq 33,394, GocraftWork 29,720, VarMQDistributed 27,183, Taskq 26,780, Asynq 24,023; at 100 producers VarMQ 207,752, GocraftWork 202,835, Rmq 197,240, Taskq 188,437, VarMQDistributed 144,838, Asynq 121,046.
+Enqueue only (`BenchmarkEnqueue`, jobs/s, highest first): at one producer VarMQ 34,858, Rmq 31,877, GocraftWork 31,027, VarMQDistributed 28,348, Asynq 25,440, Taskq 24,157; at 100 producers GocraftWork 204,753, Rmq 200,161, Taskq 196,154, VarMQ 195,120, VarMQDistributed 141,995, Asynq 116,778.
 
 Enqueue-to-handler latency (`BenchmarkLatency`, ms, lowest p50 first):
 
 | Subject | p50 | p99 | max |
 |---|---:|---:|---:|
-| Taskq | 0.03876 | 0.1623 | 3.195 |
-| VarMQDistributed | 0.06492 | 0.2351 | 2.436 |
-| VarMQ | 0.09407 | 0.5321 | 3.431 |
-| GocraftWork | 0.1274 | 0.5047 | 10.94 |
-| Rmq | 1.464 | 2.891 | 6.902 |
-| Asynq | 979.7 | 1491 | 1501 |
+| VarMQ | 0.05779 | 0.1332 | 0.3464 |
+| Taskq | 0.06198 | 0.1505 | 0.5029 |
+| VarMQDistributed | 0.06760 | 0.1620 | 1.161 |
+| GocraftWork | 0.08176 | 0.4244 | 10.47 |
+| Rmq | 1.251 | 2.440 | 6.231 |
+| Asynq | 998.0 | 1491 | 1501 |
 
 Asynq sleeps 0.5 to 1.5 s after an empty poll, and its numbers are that sleep.
-Rmq sleeps 1 ms after every fetch pass, which puts its p50 at 1.464 ms.
+Rmq sleeps 1 ms after every fetch pass, which puts its p50 at 1.251 ms.
 Taskq's fetcher blocks in `XREADGROUP`, so the producer's `XADD` wakes it directly.
 VarMQ's `Add` wakes its worker in the same process, which then pops the job with one script.
 VarMQDistributed's enqueue script publishes a wake to one idle consumer.
