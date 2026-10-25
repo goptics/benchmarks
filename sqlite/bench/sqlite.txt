@@ -2,37 +2,37 @@ goos: linux
 goarch: amd64
 pkg: github.com/goptics/benchmarks/sqlite
 cpu: 13th Gen Intel(R) Core(TM) i7-13700
-BenchmarkSQLite/Mixed1Q/ckpt1000/VarMQ-24   	       2	3202674808 ns/op	      6245 jobs/s	         4.157 walMB
-BenchmarkSQLite/Mixed1Q/ckpt1000/Goqite-24  	       2	9808583668 ns/op	      2039 jobs/s	         4.149 walMB
-BenchmarkSQLite/Mixed1Q/ckpt1000/Backlite-24         	       2	75226771368 ns/op	       265.9 jobs/s	       113.8 walMB
-BenchmarkSQLite/Mixed1Q/ckpt1000/River-24            	       2	13128044256 ns/op	      1523 jobs/s	         4.240 walMB
-BenchmarkSQLite/Mixed1Q/ckpt10000/VarMQ-24           	       2	1438192279 ns/op	     13906 jobs/s	        41.22 walMB
-BenchmarkSQLite/Mixed1Q/ckpt10000/Goqite-24          	       2	5431655877 ns/op	      3682 jobs/s	        41.22 walMB
-BenchmarkSQLite/Mixed1Q/ckpt10000/Backlite-24        	       2	21608168903 ns/op	       925.6 jobs/s	       182.3 walMB
-BenchmarkSQLite/Mixed1Q/ckpt10000/River-24           	       2	8759306841 ns/op	      2283 jobs/s	        41.30 walMB
-BenchmarkSQLite/Drain1Q/ckpt1000/VarMQ-24            	       2	1340240240 ns/op	     14923 jobs/s	         4.149 walMB
-BenchmarkSQLite/Drain1Q/ckpt1000/Goqite-24           	       2	7056277727 ns/op	      2834 jobs/s	         4.153 walMB
-BenchmarkSQLite/Drain1Q/ckpt1000/Backlite-24         	       2	15547598584 ns/op	      1286 jobs/s	       126.3 walMB
-BenchmarkSQLite/Drain1Q/ckpt1000/River-24            	       2	6150176069 ns/op	      3252 jobs/s	         4.305 walMB
-BenchmarkSQLite/Drain1Q/ckpt10000/VarMQ-24           	       2	 786794170 ns/op	     25420 jobs/s	        41.22 walMB
-BenchmarkSQLite/Drain1Q/ckpt10000/Goqite-24          	       2	4729168064 ns/op	      4229 jobs/s	        41.22 walMB
-BenchmarkSQLite/Drain1Q/ckpt10000/Backlite-24        	       2	17128919170 ns/op	      1168 jobs/s	       166.9 walMB
-BenchmarkSQLite/Drain1Q/ckpt10000/River-24           	       2	5298945460 ns/op	      3774 jobs/s	        41.24 walMB
-BenchmarkSQLite/DrainPrio/ckpt1000/VarMQ-24          	       2	 712025269 ns/op	     14044 jobs/s	         4.153 walMB
-BenchmarkSQLite/DrainPrio/ckpt1000/Goqite-24         	       2	3493455254 ns/op	      2862 jobs/s	         4.149 walMB
-BenchmarkSQLite/DrainPrio/ckpt1000/River-24          	       2	3243669480 ns/op	      3083 jobs/s	         4.676 walMB
-BenchmarkSQLite/DrainPrio/ckpt10000/VarMQ-24         	       2	 323363232 ns/op	     30925 jobs/s	        41.21 walMB
-BenchmarkSQLite/DrainPrio/ckpt10000/Goqite-24        	       2	2468107606 ns/op	      4052 jobs/s	        41.21 walMB
-BenchmarkSQLite/DrainPrio/ckpt10000/River-24         	       2	2789877922 ns/op	      3584 jobs/s	        41.22 walMB
-BenchmarkSQLite/Mixed10Q/ckpt1000/VarMQ-24           	       2	 690340771 ns/op	     28971 jobs/s	        41.34 walMB
-BenchmarkSQLite/Mixed10Q/ckpt1000/VarMQSingleFile-24 	       2	4202283922 ns/op	      4759 jobs/s	         4.244 walMB
-BenchmarkSQLite/Mixed10Q/ckpt1000/Goqite-24          	       2	9146798806 ns/op	      2187 jobs/s	         4.149 walMB
-BenchmarkSQLite/Mixed10Q/ckpt1000/Backlite-24        	       2	4160713082 ns/op	      4807 jobs/s	       352.9 walMB
-BenchmarkSQLite/Mixed10Q/ckpt1000/River-24           	       2	14459254609 ns/op	      1383 jobs/s	         4.305 walMB
-BenchmarkSQLite/Mixed10Q/ckpt10000/VarMQ-24          	       2	 186117114 ns/op	    107459 jobs/s	       385.4 walMB
-BenchmarkSQLite/Mixed10Q/ckpt10000/VarMQSingleFile-24         	       2	1834591130 ns/op	     10902 jobs/s	        41.30 walMB
-BenchmarkSQLite/Mixed10Q/ckpt10000/Goqite-24                  	       2	3962347738 ns/op	      5048 jobs/s	        41.21 walMB
-BenchmarkSQLite/Mixed10Q/ckpt10000/Backlite-24                	       2	3459530112 ns/op	      5781 jobs/s	       369.6 walMB
-BenchmarkSQLite/Mixed10Q/ckpt10000/River-24                   	       2	9202100887 ns/op	      2173 jobs/s	        41.24 walMB
+BenchmarkSQLite/Mixed1Q/ckpt1000/VarMQ-24   	       2	2332374184 ns/op	      8575 jobs/s	         4.157 walMB
+BenchmarkSQLite/Mixed1Q/ckpt1000/Goqite-24  	       2	6596999167 ns/op	      3032 jobs/s	         4.145 walMB
+BenchmarkSQLite/Mixed1Q/ckpt1000/Backlite-24         	       2	21645680989 ns/op	       924.0 jobs/s	       197.4 walMB
+BenchmarkSQLite/Mixed1Q/ckpt1000/River-24            	       2	14550621987 ns/op	      1375 jobs/s	         4.215 walMB
+BenchmarkSQLite/Mixed1Q/ckpt10000/VarMQ-24           	       2	1686358588 ns/op	     11860 jobs/s	        41.23 walMB
+BenchmarkSQLite/Mixed1Q/ckpt10000/Goqite-24          	       2	2820596200 ns/op	      7091 jobs/s	        41.22 walMB
+BenchmarkSQLite/Mixed1Q/ckpt10000/Backlite-24        	       2	68075447142 ns/op	       293.8 jobs/s	       204.9 walMB
+BenchmarkSQLite/Mixed1Q/ckpt10000/River-24           	       2	9456524780 ns/op	      2115 jobs/s	        41.25 walMB
+BenchmarkSQLite/Drain1Q/ckpt1000/VarMQ-24            	       2	1358245797 ns/op	     14725 jobs/s	         4.145 walMB
+BenchmarkSQLite/Drain1Q/ckpt1000/Goqite-24           	       2	6817875592 ns/op	      2933 jobs/s	         4.157 walMB
+BenchmarkSQLite/Drain1Q/ckpt1000/Backlite-24         	       2	17870349844 ns/op	      1119 jobs/s	       182.2 walMB
+BenchmarkSQLite/Drain1Q/ckpt1000/River-24            	       2	6192603428 ns/op	      3230 jobs/s	         4.190 walMB
+BenchmarkSQLite/Drain1Q/ckpt10000/VarMQ-24           	       2	 942285566 ns/op	     21225 jobs/s	        41.22 walMB
+BenchmarkSQLite/Drain1Q/ckpt10000/Goqite-24          	       2	4064345742 ns/op	      4921 jobs/s	        41.21 walMB
+BenchmarkSQLite/Drain1Q/ckpt10000/Backlite-24        	       2	19686616674 ns/op	      1016 jobs/s	       162.4 walMB
+BenchmarkSQLite/Drain1Q/ckpt10000/River-24           	       2	5378355781 ns/op	      3719 jobs/s	        41.28 walMB
+BenchmarkSQLite/DrainPrio/ckpt1000/VarMQ-24          	       2	 772964506 ns/op	     12937 jobs/s	         4.153 walMB
+BenchmarkSQLite/DrainPrio/ckpt1000/Goqite-24         	       2	3438300681 ns/op	      2908 jobs/s	         4.145 walMB
+BenchmarkSQLite/DrainPrio/ckpt1000/River-24          	       2	3086751718 ns/op	      3240 jobs/s	         4.499 walMB
+BenchmarkSQLite/DrainPrio/ckpt10000/VarMQ-24         	       2	 390508778 ns/op	     25608 jobs/s	        41.22 walMB
+BenchmarkSQLite/DrainPrio/ckpt10000/Goqite-24        	       2	2071291205 ns/op	      4828 jobs/s	        41.22 walMB
+BenchmarkSQLite/DrainPrio/ckpt10000/River-24         	       2	2758475320 ns/op	      3625 jobs/s	        41.39 walMB
+BenchmarkSQLite/Mixed10Q/ckpt1000/VarMQ-24           	       2	 675118556 ns/op	     29624 jobs/s	        41.35 walMB
+BenchmarkSQLite/Mixed10Q/ckpt1000/VarMQSingleFile-24 	       2	4392922048 ns/op	      4553 jobs/s	         4.244 walMB
+BenchmarkSQLite/Mixed10Q/ckpt1000/Goqite-24          	       2	9385542146 ns/op	      2131 jobs/s	         4.145 walMB
+BenchmarkSQLite/Mixed10Q/ckpt1000/Backlite-24        	       2	3755060854 ns/op	      5326 jobs/s	       246.5 walMB
+BenchmarkSQLite/Mixed10Q/ckpt1000/River-24           	       2	13976445003 ns/op	      1431 jobs/s	         4.351 walMB
+BenchmarkSQLite/Mixed10Q/ckpt10000/VarMQ-24          	       2	 191440878 ns/op	    104471 jobs/s	       386.8 walMB
+BenchmarkSQLite/Mixed10Q/ckpt10000/VarMQSingleFile-24         	       2	1417467644 ns/op	     14110 jobs/s	        41.29 walMB
+BenchmarkSQLite/Mixed10Q/ckpt10000/Goqite-24                  	       2	4284678798 ns/op	      4668 jobs/s	        41.22 walMB
+BenchmarkSQLite/Mixed10Q/ckpt10000/Backlite-24                	       2	3690747036 ns/op	      5419 jobs/s	       369.4 walMB
+BenchmarkSQLite/Mixed10Q/ckpt10000/River-24                   	       2	9197446543 ns/op	      2175 jobs/s	        41.24 walMB
 PASS
-ok  	github.com/goptics/benchmarks/sqlite	857.403s
+ok  	github.com/goptics/benchmarks/sqlite	766.272s
